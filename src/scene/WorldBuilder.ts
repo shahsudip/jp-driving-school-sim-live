@@ -601,6 +601,20 @@ export class WorldBuilder {
     addCrosswalk(0, 6.2, false);
     addCrosswalk(-6.2, 0, true);
     addCrosswalk(6.2, 0, true);
+    // Unsignalized pedestrian crosswalks (SE Parking Avenue x=12, z=24; South perimeter x=-22, z=46)
+    addCrosswalk(12.0, 24.0, true);
+    addCrosswalk(-22.0, 46.0, true);
+    // Warning approach diamonds (◇) before unsignalized crosswalks (30m & 15m ahead per Japanese Road Traffic Act!)
+    for (const [dx, dz] of [
+      [-10.0, 44.25],
+      [-34.0, 47.75],
+      [24.0, 22.25],
+    ]) {
+      const cwDiamond = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.96, 4), whiteMat);
+      cwDiamond.rotation.x = -Math.PI / 2;
+      cwDiamond.position.set(dx, 0.022, dz);
+      this.kyoshujoGroup.add(cwDiamond);
+    }
 
     // Intersection center diamond marker
     const diamond = new THREE.Mesh(
@@ -846,7 +860,10 @@ export class WorldBuilder {
     }
   }
 
-  private createSignTexture(kind: 'tomare' | '40' | 'rail' | 'guide', text?: string): THREE.CanvasTexture {
+  private createSignTexture(
+    kind: 'tomare' | '40' | 'rail' | 'guide' | 'crosswalk' | 'joko' | 'noparking' | 'direction',
+    text?: string
+  ): THREE.CanvasTexture {
     const canvas = document.createElement('canvas');
     canvas.width = 256;
     canvas.height = 256;
@@ -880,6 +897,101 @@ export class WorldBuilder {
       ctx.fillText('止まれ', 128, 92);
       ctx.font = 'bold 24px sans-serif';
       ctx.fillText('STOP', 128, 134);
+    } else if (kind === 'joko') {
+      // 徐行 (Slow Down): White inverted triangle with thick red border
+      ctx.beginPath();
+      ctx.moveTo(16, 24);
+      ctx.lineTo(240, 24);
+      ctx.lineTo(128, 232);
+      ctx.closePath();
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.lineWidth = 22;
+      ctx.strokeStyle = '#d62828';
+      ctx.stroke();
+
+      ctx.fillStyle = '#0f172a';
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 42px "Noto Sans JP", sans-serif';
+      ctx.fillText('徐 行', 128, 92);
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText('SLOW', 128, 132);
+    } else if (kind === 'crosswalk') {
+      // 横断歩道 (Pedestrian Crossing): Blue pentagon home-plate shape with white pedestrian & stripes
+      ctx.beginPath();
+      ctx.moveTo(128, 16);
+      ctx.lineTo(234, 92);
+      ctx.lineTo(216, 236);
+      ctx.lineTo(40, 236);
+      ctx.lineTo(22, 92);
+      ctx.closePath();
+      ctx.fillStyle = '#005bac';
+      ctx.fill();
+      ctx.lineWidth = 10;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+
+      // White pedestrian silhouette & zebra stripes
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(128, 86, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(116, 108, 24, 48);
+      for (let i = -2; i <= 2; i++) {
+        ctx.fillRect(118 + i * 24, 186, 14, 32);
+      }
+    } else if (kind === 'noparking') {
+      // 駐車禁止 (No Parking): Blue circle with red border and single diagonal red slash
+      ctx.beginPath();
+      ctx.arc(128, 128, 110, 0, Math.PI * 2);
+      ctx.fillStyle = '#005bac';
+      ctx.fill();
+      ctx.lineWidth = 24;
+      ctx.strokeStyle = '#d62828';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(52, 52);
+      ctx.lineTo(204, 204);
+      ctx.lineWidth = 24;
+      ctx.strokeStyle = '#d62828';
+      ctx.stroke();
+    } else if (kind === 'direction') {
+      // 指定方向外進行禁止 (Only Straight & Left permitted): Blue circle with white arrows
+      ctx.beginPath();
+      ctx.arc(128, 128, 112, 0, Math.PI * 2);
+      ctx.fillStyle = '#005bac';
+      ctx.fill();
+      ctx.lineWidth = 10;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.fillStyle = '#ffffff';
+      ctx.lineWidth = 18;
+      ctx.lineCap = 'round';
+      // Up arrow
+      ctx.beginPath();
+      ctx.moveTo(128, 200);
+      ctx.lineTo(128, 56);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(128, 38);
+      ctx.lineTo(100, 74);
+      ctx.lineTo(156, 74);
+      ctx.closePath();
+      ctx.fill();
+      // Left branch arrow
+      ctx.beginPath();
+      ctx.moveTo(128, 134);
+      ctx.lineTo(64, 134);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(46, 134);
+      ctx.lineTo(80, 108);
+      ctx.lineTo(80, 160);
+      ctx.closePath();
+      ctx.fill();
     } else if (kind === '40') {
       ctx.beginPath();
       ctx.arc(128, 128, 114, 0, Math.PI * 2);
@@ -928,7 +1040,7 @@ export class WorldBuilder {
   private buildRoadSigns(): void {
     const postMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6, roughness: 0.4 });
     const addSign = (
-      kind: 'tomare' | '40' | 'rail' | 'guide',
+      kind: 'tomare' | '40' | 'rail' | 'guide' | 'crosswalk' | 'joko' | 'noparking' | 'direction',
       x: number,
       z: number,
       rotY: number,
@@ -974,6 +1086,14 @@ export class WorldBuilder {
     addSign('guide', 16.5, -27.5, -Math.PI / 2, '坂道発進', 1.7, 1.05);
     addSign('guide', 22.0, 28.5, -Math.PI / 2, '方向変換', 1.7, 1.05);
     addSign('guide', 43.0, 28.5, -Math.PI / 2, '縦列駐車', 1.7, 1.05);
+
+    // Additional realistic Japanese traffic signs (横断歩道, 徐行, 駐車禁止, 指定方向外進行禁止)
+    addSign('crosswalk', -21.5, 41.8, Math.PI / 2);
+    addSign('crosswalk', 12.5, 19.8, -Math.PI / 2);
+    addSign('joko', -44.2, -3.5, 0); // Slow Down entering S-Curve
+    addSign('joko', 52.0, -27.5, -Math.PI / 2); // Slow Down on steep hill descent
+    addSign('noparking', -10.0, -50.2, -Math.PI / 2); // No Parking zone on North straight
+    addSign('direction', -4.2, 8.5, 0); // Designated direction sign at central intersection
   }
 
   private buildObstaclesAndBuildings(): void {

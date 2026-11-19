@@ -55,6 +55,18 @@ export function createVehicleState(
     lookedLeftTimestamp: -999,
     lookedRightTimestamp: -999,
     odometerM: 0,
+    preDrive: {
+      doorLocked: false,
+      seatAdjusted: false,
+      mirrorsAdjusted: false,
+      seatbeltFastened: false,
+      brakeAndStartDone: false,
+      handbrakeReleased: false,
+      rightSignalOn: false,
+      fivePointLookDone: false,
+      completedSteps: [],
+    },
+    mirrorTouchTimer: 0,
   };
 }
 
@@ -148,6 +160,10 @@ export function stepVehiclePhysics(
   }
   if (state.lookAngleRad < (-32 * Math.PI) / 180) {
     state.lookedRightTimestamp = options.simTimeSec;
+  }
+
+  if (state.mirrorTouchTimer > 0) {
+    state.mirrorTouchTimer = Math.max(0, state.mirrorTouchTimer - dt);
   }
 
   // 4. Terrain slope along vehicle heading

@@ -1548,3 +1548,527 @@ body.minimap-expanded #firstRunHint {
     bottom: auto;
   }
 }
+
+/* ===== Interactive 8-Step Pre-Drive Cockpit Checklist Bar (#preDriveBar) ===== */
+.pre-drive-bar {
+  position: fixed;
+  top: 52px;
+  right: 16px;
+  width: min(650px, calc(100vw - 32px));
+  z-index: 25;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: rgba(11, 20, 29, 0.9);
+  border: 1px solid rgba(251, 191, 36, 0.42);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#ui:not(.collapsed) ~ #preDriveBar,
+body.minimap-expanded #preDriveBar {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pre-drive-bar.collapsed .pd-steps-row {
+  display: none;
+}
+
+.pd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #fde68a;
+}
+
+.pd-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pd-mini-btn {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.pd-steps-row {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
+}
+
+@media (max-width: 900px) {
+  .pd-steps-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.pd-step-chip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 5px 4px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  font-size: 10.5px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+}
+
+.pd-step-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(251, 191, 36, 0.55);
+}
+
+.pd-step-chip.next-expected {
+  border-color: #fbbf24;
+  background: rgba(251, 191, 36, 0.14);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.25);
+}
+
+.pd-step-chip.done {
+  border-color: #34d399;
+  background: rgba(5, 150, 105, 0.28);
+  color: #ecfdf5;
+}
+
+.pd-step-chip.order-error {
+  border-color: #ef4444;
+  background: rgba(220, 38, 38, 0.28);
+}
+
+.pd-num {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pd-step-chip.done .pd-num {
+  background: #10b981;
+}
+
+.pd-lbl small {
+  font-size: 9.5px;
+  color: #94a3b8;
+}
+
+.pd-step-chip.done .pd-lbl small {
+  color: #a7f3d0;
+}
+
+/* ===== Red Freeze Screen Overlay on Any Japanese Rule Violation (#violationFreezeOverlay) ===== */
+.violation-freeze-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: radial-gradient(circle at center, rgba(127, 29, 29, 0.78) 0%, rgba(69, 10, 10, 0.94) 100%);
+  border: 6px solid #ef4444;
+  box-shadow: inset 0 0 90px rgba(239, 68, 68, 0.75);
+  backdrop-filter: blur(5px);
+  animation: redErrorPulse 0.35s ease-out;
+}
+
+.violation-freeze-overlay[hidden] {
+  display: none;
+}
+
+@keyframes redErrorPulse {
+  0% {
+    transform: scale(1.03);
+    background: rgba(220, 38, 38, 0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.vf-card {
+  width: min(740px, 96vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 20px 22px;
+  border-radius: 18px;
+  background: #14080a;
+  border: 2px solid #f87171;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.8);
+  color: #fef2f2;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.vf-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.vf-siren {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.vf-tag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fca5a5;
+}
+
+.vf-title {
+  margin: 3px 0 0;
+  font-size: 21px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.vf-badge {
+  margin-left: auto;
+  padding: 7px 14px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+  background: rgba(245, 158, 11, 0.25);
+  border: 2px solid #fbbf24;
+  color: #fde68a;
+}
+
+.vf-badge.fail {
+  background: rgba(239, 68, 68, 0.32);
+  border-color: #f87171;
+  color: #fecaca;
+}
+
+.vf-body {
+  display: grid;
+  gap: 10px;
+}
+
+.vf-box {
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 4px solid #f87171;
+}
+
+.vf-box.vf-law {
+  border-left-color: #fbbf24;
+}
+
+.vf-box.vf-fix {
+  border-left-color: #34d399;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.vf-box strong {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #fecaca;
+}
+
+.vf-box.vf-law strong {
+  color: #fde68a;
+}
+
+.vf-box.vf-fix strong {
+  color: #6ee7b7;
+}
+
+.vf-ja-text {
+  margin: 0 0 3px;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #ffffff;
+}
+
+.vf-en-text {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+
+.vf-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(248, 113, 113, 0.25);
+}
+
+.vf-score-remain {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fca5a5;
+}
+
+.vf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vf-resume-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid #34d399;
+  background: linear-gradient(180deg, #059669, #047857);
+  color: #ecfdf5;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ===== Comprehensive Bilingual Rulebook & Traffic Signs Modal (#rulebookModal) ===== */
+.rulebook-modal-card {
+  width: min(940px, 96vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 20px 22px;
+  border-radius: 18px;
+  background: #0f1b27;
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  box-shadow: 0 26px 65px rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rb-tabs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.rb-tab-btn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.rb-tab-btn.active {
+  background: rgba(37, 99, 235, 0.35);
+  border-color: #60a5fa;
+  color: #eff6ff;
+}
+
+.rulebook-content-body {
+  overflow-y: auto;
+  max-height: 68vh;
+  padding-right: 4px;
+}
+
+.rb-doc-callout {
+  padding: 12px 15px;
+  border-radius: 12px;
+  background: rgba(30, 58, 138, 0.25);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  margin-bottom: 12px;
+}
+
+.rb-doc-callout strong {
+  display: block;
+  font-size: 14px;
+  color: #93c5fd;
+  margin-bottom: 4px;
+}
+
+.rb-doc-callout p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #dbeafe;
+}
+
+.rb-step-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.rb-step-card {
+  display: flex;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rb-step-num {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #059669;
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rb-step-card h4,
+.rb-rule-card h4 {
+  margin: 0 0 4px;
+  font-size: 13.5px;
+  color: #f8fafc;
+}
+
+.rb-step-card p,
+.rb-rule-card p,
+.rb-rule-card li {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.48;
+  color: #cbd5e1;
+}
+
+.rb-rule-cards {
+  display: grid;
+  gap: 10px;
+}
+
+.rb-rule-card {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rb-rule-card ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+
+.rb-signs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 10px;
+}
+
+.rb-sign-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rb-sign-canvas {
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.rb-sign-card h4 {
+  margin: 0 0 2px;
+  font-size: 13.5px;
+  color: #f8fafc;
+}
+
+.rb-sign-card p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+
+.rb-table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.rb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.rb-table th,
+.rb-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.rb-table th {
+  background: rgba(255, 255, 255, 0.06);
+  color: #93c5fd;
+}
+
+.rb-badge-fail {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(239, 68, 68, 0.28);
+  color: #fca5a5;
+  font-weight: 700;
+}
+
+.rb-badge-warn {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(245, 158, 11, 0.25);
+  color: #fde68a;
+  font-weight: 700;
+}
+
+.rb-badge-pt {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+  font-weight: 700;
+}

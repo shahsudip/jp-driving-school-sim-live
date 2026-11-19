@@ -34,7 +34,9 @@ import {
   syncVehicleVisual,
   type VehicleVisualHandle,
 } from './scene/VehicleBuilder';
+import { TrafficAndPedestrians, type TrafficSafetyReport } from './scene/TrafficAndPedestrians';
 import { WorldBuilder } from './scene/WorldBuilder';
+import { renderRulebookContent, type RulebookTabId } from './ui/RulebookModal';
 import {
   getVehicleSpec,
   type CameraMode,
@@ -64,6 +66,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
 const world = new WorldBuilder(scene);
+const trafficAndPeds = new TrafficAndPedestrians(world.kyoshujoGroup);
 const customMapLayer = new CustomMapLayer(scene);
 const routeTrainer = new CustomRouteTrainer(scene);
 const signals = new TrafficSignalController();
@@ -235,7 +238,7 @@ function showResetToast() {
 }
 
 // Camera View Switching
-const CAMERA_ORDER: CameraMode[] = ['chase', 'cockpit', 'hood', 'orbit'];
+const CAMERA_ORDER: CameraMode[] = ['chase', 'cockpit', 'instructor', 'hood', 'orbit'];
 function setCameraView(mode: CameraMode) {
   settings.cameraMode = mode;
   saveSettings(settings);
@@ -246,14 +249,16 @@ function setCameraView(mode: CameraMode) {
   });
 
   const isOrbit = mode === 'orbit';
-  mirrorHudEl.style.display = isOrbit ? 'none' : mode === 'cockpit' ? 'block' : 'flex';
-  mirrorHudEl.classList.toggle('cockpit-layout', mode === 'cockpit');
-  cockpitSignalHudEl.classList.toggle('is-visible', mode === 'cockpit');
+  const isCabin = mode === 'cockpit' || mode === 'instructor';
+  mirrorHudEl.style.display = isOrbit ? 'none' : isCabin ? 'block' : 'flex';
+  mirrorHudEl.classList.toggle('cockpit-layout', isCabin);
+  cockpitSignalHudEl.classList.toggle('is-visible', isCabin);
 
   const isJa = settings.locale === 'ja';
   const labels: Record<CameraMode, string> = {
     chase: isJa ? '後方視点' : 'Chase View',
     cockpit: isJa ? '運転席 (右ハンドル)' : 'Cockpit View',
+    instructor: isJa ? '助手席・検定員視点' : 'Instructor Seat View',
     hood: isJa ? 'ボンネット' : 'Hood View',
     orbit: isJa ? '自由カメラ' : 'Free Orbit',
   };
@@ -294,6 +299,9 @@ function spawnAtPose(x: number, z: number, heading: number, mode: SimMode) {
   vehicleState = createVehicleState(x, z, heading, settings.vehicleKind, settings.transmission);
   examiner.reset(mode, vehicleState);
   document.getElementById('examResultModal')!.hidden = true;
+  document.getElementById('violationFreezeOverlay')!.hidden = true;
+  violationFreezeActive = false;
+  syncPreDriveChecklistUI();
   cameraSys.setMode(cameraSys.getMode(), vehicleState, vehicleHandle);
 }
 
@@ -783,12 +791,264 @@ document.getElementById('examCloseBtn')!.addEventListener('click', () => {
   examiner.reset('practice', vehicleState);
 });
 
+// ==========================================================
+// 1. Interactive 8-Step Pre-Drive Cockpit Checklist Controller
+// ==========================================================
+const preDriveBarEl = document.getElementById('preDriveBar')!;
+const pdCollapseBtn = document.getElementById('pdCollapseBtn')!;
+const pdAutoCompleteBtn = document.getElementById('pdAutoCompleteBtn')!;
+const pdStepChips = Array.from(document.querySelectorAll<HTMLButtonElement>('.pd-step-chip[data-pd-step]'));
+
+function syncPreDriveChecklistUI() {
+  const pd = vehicleState.preDrive;
+  if (!pd) return;
+
+  const doneFlags: Record<number, boolean> = {
+    1: pd.doorLocked,
+    2: pd.seatAdjusted,
+    3: pd.mirrorsAdjusted,
+    4: pd.seatbeltFastened,
+    5: pd.brakeAndStartDone,
+    6: pd.handbrakeReleased,
+    7: pd.rightSignalOn,
+    8: pd.fivePointLookDone,
+  };
+
+  let nextExpected = 1;
+  while (nextExpected <= 8 && doneFlags[nextExpected]) {
+    nextExpected++;
+  }
+
+  for (const chip of pdStepChips) {
+    const step = Number(chip.dataset.pdStep);
+    const isDone = Boolean(doneFlags[step]);
+    chip.classList.toggle('done', isDone);
+    chip.classList.toggle('next-expected', !isDone && step === nextExpected);
+    chip.classList.toggle('order-error', pd.orderErrorStep === step);
+  }
+}
+
+function executePreDriveStep(step: number, enforceOrder = true) {
+  audio.unlock();
+  const pd = vehicleState.preDrive;
+  if (!pd) return;
+
+  // Check if any earlier step (1 .. step-1) was skipped!
+  if (enforceOrder) {
+    for (let prev = 1; prev < step; prev++) {
+      if (!pd.completedSteps.includes(prev)) {
+        pd.orderErrorStep = step;
+        break;
+      }
+    }
+  }
+
+  if (!pd.completedSteps.includes(step)) {
+    pd.completedSteps.push(step);
+  }
+
+  if (step === 1) {
+    pd.doorLocked = true;
+    audio.playClick(520, 0.04, 0.18);
+  } else if (step === 2) {
+    pd.seatAdjusted = true;
+    audio.playClick(380, 0.06, 0.18);
+  } else if (step === 3) {
+    pd.mirrorsAdjusted = true;
+    vehicleState.mirrorTouchTimer = 1.1; // 3D driver avatar reaches up and touches rearview mirror!
+    audio.playClick(680, 0.04, 0.16);
+  } else if (step === 4) {
+    pd.seatbeltFastened = true; // 3D red diagonal seatbelt latches across driver avatar!
+    audio.playClick(880, 0.05, 0.22);
+  } else if (step === 5) {
+    pd.brakeAndStartDone = true;
+    vehicleState.stalled = false;
+    vehicleState.rpm = 860;
+    audio.playClick(460, 0.06, 0.2);
+  } else if (step === 6) {
+    pd.handbrakeReleased = true;
+    vehicleState.handbrake = false;
+    vehicleState.gear = settings.transmission === 'AT' ? 'D' : '1';
+    audio.playClick(540, 0.04, 0.16);
+  } else if (step === 7) {
+    pd.rightSignalOn = true;
+    vehicleState.blinker = 'right';
+    vehicleState.blinkerTimer = 0;
+    vehicleState.blinkerOn = true;
+    audio.playClick(720, 0.03, 0.15);
+  } else if (step === 8) {
+    pd.fivePointLookDone = true;
+    // Animate driver head turning Left then Right over shoulder
+    vehicleState.lookAngleRad = (55 * Math.PI) / 180;
+    vehicleState.lookedLeftTimestamp = simTimeSec;
+    window.setTimeout(() => {
+      vehicleState.lookAngleRad = (-64 * Math.PI) / 180;
+      vehicleState.lookedRightTimestamp = simTimeSec;
+    }, 320);
+    window.setTimeout(() => {
+      vehicleState.lookAngleRad = 0;
+    }, 780);
+    audio.playClick(940, 0.04, 0.18);
+  }
+
+  syncPreDriveChecklistUI();
+}
+
+pdStepChips.forEach((chip) => {
+  chip.addEventListener('click', () => {
+    const step = Number(chip.dataset.pdStep);
+    if (step >= 1 && step <= 8) {
+      executePreDriveStep(step, true);
+    }
+  });
+});
+
+pdAutoCompleteBtn.addEventListener('click', () => {
+  vehicleState.preDrive.orderErrorStep = undefined;
+  for (let s = 1; s <= 8; s++) {
+    executePreDriveStep(s, false);
+  }
+});
+
+pdCollapseBtn.addEventListener('click', () => {
+  const collapsed = preDriveBarEl.classList.toggle('collapsed');
+  pdCollapseBtn.textContent = collapsed ? '+' : '−';
+});
+
+// Number keys 1..8 trigger Pre-Drive Cockpit Steps directly
+window.addEventListener('keydown', (ev) => {
+  if (ev.target instanceof HTMLInputElement || ev.target instanceof HTMLSelectElement) return;
+  if (ev.code.startsWith('Digit')) {
+    const num = Number(ev.code.replace('Digit', ''));
+    if (num >= 1 && num <= 8) {
+      executePreDriveStep(num, true);
+    }
+  }
+});
+
+// ==========================================================
+// 2. Red Error Freeze Screen on Any Japanese Rule Violation
+// ==========================================================
+const violationFreezeOverlayEl = document.getElementById('violationFreezeOverlay')!;
+const strictRuleFreezeChk = document.getElementById('strictRuleFreezeChk') as HTMLInputElement;
+let violationFreezeActive = false;
+
+function showViolationFreezeOverlay(v: ViolationEvent) {
+  violationFreezeActive = true;
+  // Stop vehicle movement immediately so it doesn't keep rolling into the curb/intersection while frozen
+  vehicleState.speedMs = 0;
+
+  const isJa = settings.locale === 'ja';
+  document.getElementById('vfTagText')!.textContent = v.instantFail
+    ? isJa
+      ? '🚨 検定中止（一発不合格・補助ブレーキ作動） · INSTANT DISQUALIFICATION'
+      : '🚨 INSTANT DISQUALIFICATION (検定中止・補助ブレーキ作動)'
+    : isJa
+      ? `⚠️ 日本の技能試験基準 減点違反（-${v.points}点） · JAPANESE EXAM STANDARD VIOLATION`
+      : `⚠️ JAPANESE DRIVING EXAM RULE VIOLATION (-${v.points} PTS · 技能試験減点)`;
+
+  document.getElementById('vfTitleText')!.textContent = `${v.labelJa} · ${v.labelEn}`;
+
+  const badgeEl = document.getElementById('vfBadgeText')!;
+  badgeEl.textContent = v.instantFail ? '検定中止 / FAIL' : `-${v.points} PTS (減点)`;
+  badgeEl.className = `vf-badge ${v.instantFail ? 'fail' : ''}`;
+
+  document.getElementById('vfDetailJa')!.textContent = v.detailJa;
+  document.getElementById('vfDetailEn')!.textContent = v.detailEn;
+
+  document.getElementById('vfRuleRefJa')!.textContent =
+    v.ruleRefJa ?? '道路交通法および警察庁「技能試験実施基準」に基づく減点対象行為です。';
+  document.getElementById('vfRuleRefEn')!.textContent =
+    v.ruleRefEn ?? 'Point deduction enforced under the Japanese Road Traffic Act and NPA Practical Exam Standards.';
+
+  document.getElementById('vfHowToFixJa')!.textContent =
+    v.howToFixJa ?? '安全確認（ミラーと直接目視）および適切な速度・合図を行ってから進行してください。';
+  document.getElementById('vfHowToFixEn')!.textContent =
+    v.howToFixEn ?? 'Perform full mirror + blind-spot checks, proper signaling, and speed control before proceeding.';
+
+  const score = examiner.getScore();
+  document.getElementById('vfScoreRemainText')!.textContent = isJa
+    ? `現在の持ち点: ${score} / 100点 （合格基準: 70点以上）`
+    : `Remaining Score: ${score} / 100 pts (Pass Threshold: 70 pts)`;
+
+  violationFreezeOverlayEl.hidden = false;
+}
+
+function dismissViolationFreezeOverlay() {
+  if (!violationFreezeActive) return;
+  violationFreezeActive = false;
+  violationFreezeOverlayEl.hidden = true;
+  if (examiner.isTerminated() && examiner.getMode() === 'exam') {
+    showExamSummary(examiner.getSummary(vehicleState));
+  }
+}
+
+document.getElementById('vfResumeBtn')!.addEventListener('click', () => {
+  audio.unlock();
+  dismissViolationFreezeOverlay();
+});
+
+document.getElementById('vfRetryStationBtn')!.addEventListener('click', () => {
+  audio.unlock();
+  violationFreezeActive = false;
+  violationFreezeOverlayEl.hidden = true;
+  resetVehicle();
+});
+
+document.getElementById('vfOpenRulebookBtn')!.addEventListener('click', () => {
+  audio.unlock();
+  openRulebookModal('written');
+});
+
+window.addEventListener('keydown', (ev) => {
+  if (!violationFreezeActive) return;
+  if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Escape') {
+    ev.preventDefault();
+    dismissViolationFreezeOverlay();
+  }
+});
+
+// ==========================================================
+// 3. Comprehensive Bilingual Rulebook & PDF Study Guide Modal
+// ==========================================================
+const rulebookModalEl = document.getElementById('rulebookModal')!;
+const rulebookContentBodyEl = document.getElementById('rulebookContentBody')!;
+let activeRulebookTab: RulebookTabId = 'predrive';
+
+function openRulebookModal(tab: RulebookTabId = activeRulebookTab) {
+  audio.unlock();
+  activeRulebookTab = tab;
+  document.querySelectorAll<HTMLButtonElement>('[data-rb-tab]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.rbTab === activeRulebookTab);
+  });
+  renderRulebookContent(rulebookContentBodyEl, activeRulebookTab, settings.locale);
+  rulebookModalEl.hidden = false;
+}
+
+document.getElementById('quickRulebookBtn')!.addEventListener('click', () => openRulebookModal());
+document.getElementById('openRulebookBtn')!.addEventListener('click', () => openRulebookModal());
+document.getElementById('rulebookCloseBtn')!.addEventListener('click', () => {
+  rulebookModalEl.hidden = true;
+});
+
+document.querySelectorAll<HTMLButtonElement>('[data-rb-tab]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const tab = (btn.dataset.rbTab as RulebookTabId) || 'predrive';
+    openRulebookModal(tab);
+  });
+});
+
 examiner.onViolation = (v) => {
   pushViolationToast(v);
   audio.playViolationChime(v.instantFail);
+  if (strictRuleFreezeChk.checked) {
+    showViolationFreezeOverlay(v);
+  }
 };
 examiner.onExamFinish = (summary) => {
-  showExamSummary(summary);
+  if (!violationFreezeActive) {
+    showExamSummary(summary);
+  }
 };
 
 // Keyboard & Touch Input Manager
@@ -797,10 +1057,24 @@ const inputMgr = new InputManager({
     vehicleState.blinker = vehicleState.blinker === dir ? 'off' : dir;
     vehicleState.blinkerTimer = 0;
     vehicleState.blinkerOn = vehicleState.blinker !== 'off';
+    if (vehicleState.blinker === 'right' && vehicleState.preDrive) {
+      vehicleState.preDrive.rightSignalOn = true;
+      if (!vehicleState.preDrive.completedSteps.includes(7)) {
+        vehicleState.preDrive.completedSteps.push(7);
+      }
+      syncPreDriveChecklistUI();
+    }
   },
   onToggleHandbrake: () => {
     vehicleState.handbrake = !vehicleState.handbrake;
     audio.playClick(420, 0.04, 0.16);
+    if (!vehicleState.handbrake && vehicleState.preDrive) {
+      vehicleState.preDrive.handbrakeReleased = true;
+      if (!vehicleState.preDrive.completedSteps.includes(6)) {
+        vehicleState.preDrive.completedSteps.push(6);
+      }
+      syncPreDriveChecklistUI();
+    }
   },
   onShiftGear: (delta) => {
     shiftGearStep(vehicleState, delta);
@@ -970,6 +1244,7 @@ function syncBilingualText() {
   const viewText: Record<string, string> = {
     chase: isJa ? '後方 (Chase)' : 'Chase (後方)',
     cockpit: isJa ? '運転席 (Cockpit)' : 'Cockpit (運転席)',
+    instructor: isJa ? '👨‍✈️ 検定員席 (Instructor)' : '👨‍✈️ Instructor (検定員席)',
     hood: isJa ? 'ボンネット (Hood)' : 'Hood (ボンネット)',
     orbit: isJa ? '自由 (Free)' : 'Free (自由)',
   };
@@ -977,6 +1252,25 @@ function syncBilingualText() {
     const k = btn.dataset.viewTarget || 'chase';
     btn.textContent = viewText[k] || k;
   });
+
+  document.getElementById('quickRulebookBtn')!.textContent = isJa
+    ? '📖 教本・標識・PDF (Rules)'
+    : '📖 Rules & PDF (教本・標識)';
+  document.getElementById('openRulebookBtn')!.textContent = isJa
+    ? '📖 教本・標識・減点基準・PDF (Rules & PDF)'
+    : '📖 Rules, Signs & Study PDF (教本・標識)';
+  document.getElementById('lblStrictFreeze')!.textContent = isJa
+    ? '🚨 違反時に赤画面で一時停止＆解説 (Red Freeze on Rule Break)'
+    : '🚨 Red Freeze & Explain on Rule Break (違反時赤画面停止)';
+  document.getElementById('pdTitleText')!.textContent = isJa
+    ? '👨‍✈️ 乗車〜発進手順 (Pre-Drive Order — ①〜⑧を順番にクリックまたはキー1〜8)'
+    : '👨‍✈️ Pre-Drive Exam Sequence (Click 1–8 in exact order before pulling out)';
+  document.getElementById('pdAutoCompleteBtn')!.textContent = isJa
+    ? '⚡ 一括完了 (Auto-Complete)'
+    : '⚡ Auto-Complete (一括完了)';
+  if (!rulebookModalEl.hidden) {
+    renderRulebookContent(rulebookContentBodyEl, activeRulebookTab, settings.locale);
+  }
 
   document.getElementById('lblMirrorL')!.textContent = isJa ? '左ミラー · Left' : 'Left Mirror · 左';
   document.getElementById('lblMirrorC')!.textContent = isJa ? 'ルームミラー · Center' : 'Center Mirror · 中央';
@@ -1384,7 +1678,12 @@ function animate(nowMs: number) {
 
   let latestCollision: CollisionReport = checkCourseCollisions(vehicleState, spec);
 
-  while (accumulator >= FIXED_DT) {
+  // If the Red Rule Violation Freeze Screen is active, pause physics & traffic updates until the user acknowledges!
+  if (violationFreezeActive) {
+    accumulator = 0;
+  }
+
+  while (accumulator >= FIXED_DT && !violationFreezeActive) {
     simTimeSec += FIXED_DT;
     signals.update(FIXED_DT);
 
@@ -1401,7 +1700,20 @@ function animate(nowMs: number) {
       courseMode === 'custom' ? flatTerrain : undefined
     );
 
+    if (
+      vehicleState.preDrive &&
+      !vehicleState.preDrive.fivePointLookDone &&
+      simTimeSec - vehicleState.lookedRightTimestamp < 1.5
+    ) {
+      vehicleState.preDrive.fivePointLookDone = true;
+      if (!vehicleState.preDrive.completedSteps.includes(8)) {
+        vehicleState.preDrive.completedSteps.push(8);
+      }
+      syncPreDriveChecklistUI();
+    }
+
     if (courseMode === 'kyoshujo') {
+      const trafficSafety: TrafficSafetyReport = trafficAndPeds.update(FIXED_DT, vehicleState, signals);
       latestCollision = checkCourseCollisions(vehicleState, spec);
       if (latestCollision.pushX !== 0 || latestCollision.pushZ !== 0) {
         vehicleState.x += latestCollision.pushX;
@@ -1415,7 +1727,7 @@ function animate(nowMs: number) {
           }
         }
       }
-      examiner.update(FIXED_DT, vehicleState, latestCollision, signals);
+      examiner.update(FIXED_DT, vehicleState, latestCollision, signals, trafficSafety);
     }
 
     accumulator -= FIXED_DT;

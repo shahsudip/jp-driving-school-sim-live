@@ -6,7 +6,7 @@ export type TransmissionMode = 'AT' | 'MT';
 
 export type Gear = 'P' | 'R' | 'N' | 'D' | '1' | '2' | '3' | '4' | '5';
 
-export type CameraMode = 'chase' | 'cockpit' | 'hood' | 'orbit';
+export type CameraMode = 'chase' | 'cockpit' | 'instructor' | 'hood' | 'orbit';
 
 export type SimMode = 'practice' | 'exam';
 
@@ -85,6 +85,19 @@ export function getVehicleSpec(kind: VehicleKind): VehicleSpec {
   return kind === 'motorcycle' ? MOTORCYCLE_SPEC : SEDAN_SPEC;
 }
 
+export interface PreDriveChecklistState {
+  doorLocked: boolean;
+  seatAdjusted: boolean;
+  mirrorsAdjusted: boolean;
+  seatbeltFastened: boolean;
+  brakeAndStartDone: boolean;
+  handbrakeReleased: boolean;
+  rightSignalOn: boolean;
+  fivePointLookDone: boolean;
+  completedSteps: number[]; // Ordered 1..8 steps performed
+  orderErrorStep?: number;
+}
+
 export interface VehicleState {
   // Center of vehicle on XZ plane
   x: number;
@@ -114,6 +127,8 @@ export interface VehicleState {
   lookedLeftTimestamp: number;
   lookedRightTimestamp: number;
   odometerM: number;
+  preDrive: PreDriveChecklistState;
+  mirrorTouchTimer: number; // > 0 when avatar reaches up to adjust mirror
 }
 
 export interface InputState {
@@ -138,7 +153,11 @@ export type ViolationCode =
   | 'NO_SAFETY_LOOK'
   | 'HILL_ROLLBACK'
   | 'SPEED_LIMIT'
-  | 'HANDBRAKE_DRAG';
+  | 'HANDBRAKE_DRAG'
+  | 'PRE_DRIVE_ORDER'
+  | 'NO_SEATBELT'
+  | 'PEDESTRIAN_PRIORITY'
+  | 'TRAFFIC_COLLISION';
 
 export interface ViolationEvent {
   id: string;
@@ -150,6 +169,10 @@ export interface ViolationEvent {
   labelEn: string;
   detailJa: string;
   detailEn: string;
+  ruleRefJa?: string;
+  ruleRefEn?: string;
+  howToFixJa?: string;
+  howToFixEn?: string;
 }
 
 export interface ExamSummary {

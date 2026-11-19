@@ -174,4 +174,60 @@ describe('ExaminerEngine', () => {
     }
     expect(ex2.getViolations()).toHaveLength(0);
   });
+
+  it('checks Pre-Drive Cockpit Checklist order & seatbelt when pulling out from Start Bay 1', () => {
+    const signals = new TrafficSignalController();
+
+    // Case 1: Pull out from Start Bay 1 (12.0, 48.1) without fastening seatbelt
+    const stateUnbelted = createVehicleState(12.0, 48.1, Math.PI / 2, 'sedan', 'AT');
+    stateUnbelted.blinker = 'right';
+    const ex1 = new ExaminerEngine();
+    ex1.reset('exam', stateUnbelted);
+
+    for (let i = 0; i < 90; i++) {
+      stepVehiclePhysics(stateUnbelted, neutralInput({ throttle: 0.7 }), SEDAN_SPEC, 1 / 60, {
+        steeringSensitivity: 1,
+        autoCenterSteering: true,
+        simTimeSec: i / 60,
+      });
+      ex1.update(1 / 60, stateUnbelted, checkCourseCollisions(stateUnbelted, SEDAN_SPEC), signals);
+    }
+    const beltViol = ex1.getViolations().find((v) => v.code === 'NO_SEATBELT');
+    expect(beltViol).toBeDefined();
+    expect(beltViol?.ruleRefJa).toContain('道路交通法');
+    expect(beltViol?.howToFixEn).toBeTruthy();
+
+    // Case 2: Fastened seatbelt first (skipped seat & mirror adjustment -> PRE_DRIVE_ORDER violation)
+    const stateWrongOrder = createVehicleState(12.0, 48.1, Math.PI / 2, 'sedan', 'AT');
+    stateWrongOrder.blinker = 'right';
+    stateWrongOrder.preDrive.seatbeltFastened = true;
+    stateWrongOrder.preDrive.orderErrorStep = 4;
+    const ex2 = new ExaminerEngine();
+    ex2.reset('exam', stateWrongOrder);
+
+    for (let i = 0; i < 90; i++) {
+      stepVehiclePhysics(stateWrongOrder, neutralInput({ throttle: 0.7 }), SEDAN_SPEC, 1 / 60, {
+        steeringSensitivity: 1,
+        autoCenterSteering: true,
+        simTimeSec: i / 60,
+      });
+      ex2.update(1 / 60, stateWrongOrder, checkCourseCollisions(stateWrongOrder, SEDAN_SPEC), signals);
+    }
+    expect(ex2.getViolations().some((v) => v.code === 'PRE_DRIVE_ORDER')).toBe(true);
+  });
+
+  it('records PEDESTRIAN_PRIORITY instant fail when failing to yield at a zebra crosswalk', () => {
+    const signals = new TrafficSignalController();
+    const state = createVehicleState(-20.0, 47.75, Math.PI / 2, 'sedan', 'AT');
+    state.speedMs = 5.0;
+    const ex = new ExaminerEngine();
+    ex.reset('exam', state);
+
+    ex.update(1 / 60, state, checkCourseCollisions(state, SEDAN_SPEC), signals, {
+      pedestrianDanger: true,
+      trafficCollision: false,
+    });
+    expect(ex.getViolations().some((v) => v.code === 'PEDESTRIAN_PRIORITY')).toBe(true);
+    expect(ex.isTerminated()).toBe(true);
+  });
 });

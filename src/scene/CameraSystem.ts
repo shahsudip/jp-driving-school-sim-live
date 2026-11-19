@@ -57,14 +57,17 @@ export class CameraSystem {
   setMode(mode: CameraMode, state: VehicleState, handle?: VehicleVisualHandle): void {
     this.mode = mode;
     this.orbit.enabled = mode === 'orbit';
-    this.camera.userData.carMirrorInterval = mode === 'cockpit' ? 0 : 250;
+    this.camera.userData.carMirrorInterval = mode === 'cockpit' || mode === 'instructor' ? 0 : 250;
 
     if (handle) {
       setVehicleCockpitVisibility(handle, mode === 'cockpit');
     }
 
     document.body.dataset.view = mode === 'chase' ? 'follow' : mode;
-    document.body.classList.toggle('sedan-cockpit', mode === 'cockpit' && handle?.kind !== 'motorcycle');
+    document.body.classList.toggle(
+      'sedan-cockpit',
+      (mode === 'cockpit' || mode === 'instructor') && handle?.kind !== 'motorcycle'
+    );
     document.body.classList.toggle('bike-cockpit', mode === 'cockpit' && handle?.kind === 'motorcycle');
 
     if (mode === 'orbit') {
@@ -144,6 +147,22 @@ export class CameraSystem {
       return { position, lookTarget };
     }
 
+    if (mode === 'instructor') {
+      // Seated in left front passenger seat (助手席・検定員席: -0.37m left, 1.24m high, 0.35m behind center)
+      // Watching the 3D Driver Avatar on the right (+0.36m), steering wheel, mirrors, seatbelt, and road ahead
+      const position = carPos
+        .clone()
+        .add(new THREE.Vector3(0, 1.24, 0))
+        .add(fwd.clone().multiplyScalar(-0.34))
+        .add(right.clone().multiplyScalar(-0.37));
+      const lookTarget = carPos
+        .clone()
+        .add(new THREE.Vector3(0, 1.02 + Math.sin(state.pitch) * 1.2, 0))
+        .add(fwd.clone().multiplyScalar(0.32))
+        .add(right.clone().multiplyScalar(0.24 - state.lookAngleRad * 0.18));
+      return { position, lookTarget };
+    }
+
     if (mode === 'hood') {
       const position = carPos
         .clone()
@@ -184,13 +203,20 @@ export class CameraSystem {
       return;
     }
 
-    const baseFov = this.mode === 'cockpit' ? (vehicleKind === 'motorcycle' ? 78 : 70) : 60;
+    const baseFov =
+      this.mode === 'cockpit'
+        ? vehicleKind === 'motorcycle'
+          ? 78
+          : 70
+        : this.mode === 'instructor'
+          ? 74
+          : 60;
     const fovT = THREE.MathUtils.clamp(Math.abs(state.speedMs) / 22, 0, 1);
     this.camera.fov = THREE.MathUtils.damp(this.camera.fov, baseFov + fovT * 14, 5, dt);
     this.camera.updateProjectionMatrix();
 
     const pose = this.getViewPose(this.mode, state, vehicleKind);
-    if (this.mode === 'cockpit' || this.mode === 'hood') {
+    if (this.mode === 'cockpit' || this.mode === 'instructor' || this.mode === 'hood') {
       this.camera.position.copy(pose.position);
       this.camera.lookAt(pose.lookTarget);
       return;

@@ -14,8 +14,14 @@
       <div id="collapsedQuickActions" aria-label="Quick view menu">
         <button class="quickViewBtn is-active" data-view-target="chase" type="button">Chase</button>
         <button class="quickViewBtn" data-view-target="cockpit" type="button">Cockpit</button>
+        <button class="quickViewBtn" data-view-target="instructor" type="button" style="border-color:rgba(251,191,36,0.55);color:#fde68a;">
+          👨‍✈️ Instructor / 検定員席
+        </button>
         <button class="quickViewBtn" data-view-target="hood" type="button">Hood</button>
         <button class="quickViewBtn" data-view-target="orbit" type="button">Free</button>
+        <button id="quickRulebookBtn" class="quickViewBtn" type="button" style="border-color:rgba(96,165,250,0.55);color:#bfdbfe;">
+          📖 Rules &amp; PDF / 教本・標識
+        </button>
         <button id="quickRouteBuilderBtn" class="quickViewBtn" type="button" style="border-color:rgba(52,211,153,0.45);color:#a7f3d0;">
           📍 Route Builder / ルート作成
         </button>
@@ -79,6 +85,15 @@
             <button id="modeExamBtn" type="button" class="action-btn" style="border-color:rgba(52,211,153,0.5);color:#a7f3d0;">
               Mock Exam (修了検定)
             </button>
+          </div>
+          <div class="controlGrid two-col">
+            <button id="openRulebookBtn" type="button" class="action-btn" style="border-color:rgba(96,165,250,0.5);color:#bfdbfe;">
+              📖 Rules, Signs &amp; PDF (教本・標識・減点基準)
+            </button>
+            <label class="toggle-card" style="margin:0;padding:8px 10px;">
+              <input id="strictRuleFreezeChk" type="checkbox" checked />
+              <span id="lblStrictFreeze">🚨 Red Freeze on Rule Break (違反時赤画面停止)</span>
+            </label>
           </div>
         </section>
 
@@ -277,6 +292,51 @@
   <div id="cockpitSignalHud" aria-hidden="true">
     <div class="cockpitSignalLamp" id="cockpitLampLeft" data-direction="left">← Left</div>
     <div class="cockpitSignalLamp" id="cockpitLampRight" data-direction="right">Right →</div>
+  </div>
+
+  <!-- Interactive 8-Step Pre-Drive Cockpit Checklist Bar (乗車〜発進の正しい順序チェック) -->
+  <div id="preDriveBar" class="pre-drive-bar" aria-label="Pre-drive cockpit checklist">
+    <div class="pd-header">
+      <strong id="pdTitleText">👨‍✈️ 乗車〜発進手順 (Pre-Drive Order — Click or Press 1–8 in sequence)</strong>
+      <div class="pd-header-actions">
+        <button id="pdAutoCompleteBtn" type="button" class="pd-mini-btn">⚡ Auto-Complete (一括完了)</button>
+        <button id="pdCollapseBtn" type="button" class="pd-mini-btn" aria-label="Minimize checklist">−</button>
+      </div>
+    </div>
+    <div id="pdStepsRow" class="pd-steps-row">
+      <button type="button" class="pd-step-chip" data-pd-step="1">
+        <span class="pd-num">1</span>
+        <span class="pd-lbl" id="pdStep1Lbl">Door Lock<br/><small>ドアロック</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="2">
+        <span class="pd-num">2</span>
+        <span class="pd-lbl" id="pdStep2Lbl">Seat Adjust<br/><small>座席調整</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="3">
+        <span class="pd-num">3</span>
+        <span class="pd-lbl" id="pdStep3Lbl">Mirrors<br/><small>ミラー確認</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="4">
+        <span class="pd-num">4</span>
+        <span class="pd-lbl" id="pdStep4Lbl">Seatbelt<br/><small>ベルト着用</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="5">
+        <span class="pd-num">5</span>
+        <span class="pd-lbl" id="pdStep5Lbl">Brake+Start<br/><small>エンジン始動</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="6">
+        <span class="pd-num">6</span>
+        <span class="pd-lbl" id="pdStep6Lbl">Gear D+Side<br/><small>D・サイド解除</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="7">
+        <span class="pd-num">7</span>
+        <span class="pd-lbl" id="pdStep7Lbl">Right Signal<br/><small>右合図 (E)</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="8">
+        <span class="pd-num">8</span>
+        <span class="pd-lbl" id="pdStep8Lbl">5-Pt Look<br/><small>右後方目視 (X)</small></span>
+      </button>
+    </div>
   </div>
 
   <!-- MT Stall Warning -->
@@ -487,6 +547,86 @@
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Red Freeze Screen on Any Japanese Rule Violation (補助ブレーキ・違反エラー緊急停止画面) -->
+  <div id="violationFreezeOverlay" class="violation-freeze-overlay" hidden role="alertdialog" aria-modal="true">
+    <div class="vf-card">
+      <div class="vf-banner">
+        <span class="vf-siren">🚨</span>
+        <div>
+          <div class="vf-tag" id="vfTagText">JAPANESE DRIVING TEST STANDARD VIOLATION · 検定基準違反・補助ブレーキ作動</div>
+          <h2 id="vfTitleText" class="vf-title">指定場所一時不停止 (Stop Sign Violation)</h2>
+        </div>
+        <div id="vfBadgeText" class="vf-badge fail">検定中止 / FAIL</div>
+      </div>
+
+      <div class="vf-body">
+        <div class="vf-box vf-what">
+          <strong id="vfWhatHeading">❌ What Rule You Broke (違反内容):</strong>
+          <p id="vfDetailJa" class="vf-ja-text"></p>
+          <p id="vfDetailEn" class="vf-en-text"></p>
+        </div>
+
+        <div class="vf-box vf-law">
+          <strong id="vfLawHeading">⚖️ Japanese Road Traffic Act &amp; NPA Standard (根拠法令・技能試験実施基準):</strong>
+          <p id="vfRuleRefJa" class="vf-ja-text"></p>
+          <p id="vfRuleRefEn" class="vf-en-text"></p>
+        </div>
+
+        <div class="vf-box vf-fix">
+          <strong id="vfFixHeading">✅ How to Pass According to Japanese Standard (正しい運転操作・合格のポイント):</strong>
+          <p id="vfHowToFixJa" class="vf-ja-text"></p>
+          <p id="vfHowToFixEn" class="vf-en-text"></p>
+        </div>
+      </div>
+
+      <div class="vf-footer">
+        <span id="vfScoreRemainText" class="vf-score-remain">Current Score: 75 / 100</span>
+        <div class="vf-actions">
+          <button id="vfOpenRulebookBtn" type="button" class="action-btn">📖 Open Rulebook &amp; PDF (教本を見る)</button>
+          <button id="vfRetryStationBtn" type="button" class="action-btn">🔄 Retry Station (この課題をやり直す)</button>
+          <button id="vfResumeBtn" type="button" class="vf-resume-btn">▶ Acknowledge &amp; Resume [Space / Enter] (確認して再開)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comprehensive Bilingual Rulebook, Road Signs & Embedded PDF Study Guide Modal -->
+  <div id="rulebookModal" class="modal-backdrop" hidden>
+    <div class="rulebook-modal-card">
+      <div class="exam-top-row" style="margin-bottom:8px;">
+        <div>
+          <h2 id="rbModalTitle" style="margin:0 0 3px;font-size:19px;">
+            📖 Japanese Driving School &amp; Gaimen Kirikae Official Rulebook (日本の自動車教習所・外免切替 完全教本)
+          </h2>
+          <p id="rbModalSub" style="margin:0;font-size:12.5px;color:#94a3b8;">
+            Complete Pre-Drive Cockpit Sequence, Driving Center Compound Rules (場内) vs Public Road Rules (路上), Road Signs Encyclopedia &amp; Bundled 42-Page Study Guide PDF.
+          </p>
+        </div>
+        <button id="rulebookCloseBtn" class="action-btn" type="button">✕</button>
+      </div>
+
+      <div class="rb-tabs-row" role="tablist">
+        <button type="button" class="rb-tab-btn active" data-rb-tab="predrive" id="rbTabPredrive">
+          1. 👨‍✈️ Pre-Drive Order (乗車〜発進手順)
+        </button>
+        <button type="button" class="rb-tab-btn" data-rb-tab="compound" id="rbTabCompound">
+          2. 🏫 Driving Center Course (場内コース規則)
+        </button>
+        <button type="button" class="rb-tab-btn" data-rb-tab="road" id="rbTabRoad">
+          3. 🛣️ Public Road Rules (路上・道路交通法)
+        </button>
+        <button type="button" class="rb-tab-btn" data-rb-tab="signs" id="rbTabSigns">
+          4. 🪧 Traffic Signs (道路標識図鑑)
+        </button>
+        <button type="button" class="rb-tab-btn" data-rb-tab="written" id="rbTabWritten">
+          5. 📕 Deductions &amp; Study PDF (減点表・教本PDF)
+        </button>
+      </div>
+
+      <div id="rulebookContentBody" class="rulebook-content-body"></div>
     </div>
   </div>
 
