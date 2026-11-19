@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#059669" />
+  <title>Japan Driving Test Course Simulator 3D | 日本の自動車教習所シミュレーター</title>
+  <script type="module" crossorigin src="./assets/index-Cpebx6Ox.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-OakeTqTq.css">
+</head>
+<body>
+  <!-- Top-Left Collapsible Setup Card & Persistent Quick View Pills (GaimenGo layout) -->
+  <div id="ui" class="collapsed">
+    <div class="topBarRow">
+      <button id="uiToggle" type="button">Show Menu / メニュー</button>
+      <div id="collapsedQuickActions" aria-label="Quick view menu">
+        <button class="quickViewBtn is-active" data-view-target="chase" type="button">Chase</button>
+        <button class="quickViewBtn" data-view-target="cockpit" type="button">Cockpit</button>
+        <button class="quickViewBtn" data-view-target="hood" type="button">Hood</button>
+        <button class="quickViewBtn" data-view-target="orbit" type="button">Free</button>
+        <button id="quickResetBtn" class="quickViewBtn" type="button">Reset vehicle</button>
+        <button id="quickLangEnBtn" class="quickViewBtn" type="button">EN</button>
+        <button id="quickLangJaBtn" class="quickViewBtn" type="button">日本語</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panelScroll">
+        <div class="brandHeaderRow">
+          <h1 id="appBrandText" class="appBrand">GaimenGo Driving Simulator · 日本の自動車教習所</h1>
+          <div style="display:flex;gap:4px;">
+            <button id="panelLangEnBtn" class="subtleUtilityBtn" type="button">English</button>
+            <button id="panelLangJaBtn" class="subtleUtilityBtn" type="button">日本語</button>
+          </div>
+        </div>
+
+        <h2 class="setupTitle">
+          <span class="setupMascot" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="#34d399" stroke-width="2.2" />
+              <circle cx="12" cy="12" r="3" fill="#34d399" />
+              <path d="M12 15v6M5 10.5h14" stroke="#6ee7b7" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </span>
+          <span id="setupTitleText">Ready to drive / ドライブの準備</span>
+        </h2>
+        <p id="setupLeadText" class="setupLead">
+          Choose your vehicle and map, warp to any driving school obstacle, or start the 100-point exam.
+        </p>
+
+        <section class="controlsSection">
+          <div class="controlGrid two-col">
+            <label class="control-field">
+              <span id="lblVehicle">Vehicle / 車種</span>
+              <select id="vehicleType">
+                <option id="optSedan" value="sedan">Sedan (RHD Corolla)</option>
+                <option id="optMoto" value="motorcycle">Motorcycle (400cc)</option>
+              </select>
+            </label>
+            <label class="control-field">
+              <span id="lblTrans">Transmission / 変速機</span>
+              <select id="transmissionMode">
+                <option id="optAT" value="AT">AT (Automatic)</option>
+                <option id="optMT" value="MT">MT (Manual 5-Speed)</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="controlGrid">
+            <label class="control-field">
+              <span id="lblMap">Course / Map (コース選択)</span>
+              <select id="mapPreset"></select>
+            </label>
+          </div>
+
+          <div class="controlGrid two-col">
+            <button id="modePracticeBtn" type="button" class="action-btn">Free Practice (自由練習)</button>
+            <button id="modeExamBtn" type="button" class="action-btn" style="border-color:rgba(52,211,153,0.5);color:#a7f3d0;">
+              Mock Exam (修了検定)
+            </button>
+          </div>
+        </section>
+
+        <!-- Fold 1: Kyoshujo Station Quick-Warp -->
+        <details class="settingsFold" open>
+          <summary id="foldStationsTitle">Kyōshūjo Training Stations (課題ワープ)</summary>
+          <div class="settingsFoldBody">
+            <div id="stationGrid" class="station-chip-grid"></div>
+          </div>
+        </details>
+
+        <!-- Fold 2: Handling & Sound + Live Acceleration Curve SVG -->
+        <details class="settingsFold">
+          <summary id="foldTuningTitle">Handling &amp; sound (操作感とサウンド)</summary>
+          <div class="settingsFoldBody">
+            <div class="range-card control-range">
+              <span id="lblMaxSpeed">Max Speed</span>
+              <input id="maxSpeed" type="range" min="4" max="35" step="1" value="17" />
+              <span id="maxSpeedValue" class="control-value">17 m/s</span>
+            </div>
+
+            <div class="range-card control-range">
+              <span id="lblVolume">Volume</span>
+              <input id="masterVolume" type="range" min="0" max="100" step="1" value="55" />
+              <span id="masterVolumeValue" class="control-value">55%</span>
+            </div>
+
+            <div class="range-card control-range">
+              <span id="lblSteerSens">Steering Sensitivity</span>
+              <input id="steeringSensitivity" type="range" min="50" max="200" step="1" value="100" />
+              <span id="steeringSensitivityValue" class="control-value">1.00x</span>
+            </div>
+
+            <label class="toggle-card">
+              <input id="autoCenterSteering" type="checkbox" checked />
+              <span id="lblAutoCenter">Auto-center Steering</span>
+            </label>
+
+            <label class="control-field">
+              <span id="lblMirrorQuality">Graphics &amp; Mirrors</span>
+              <select id="renderQuality">
+                <option id="optMirrorHigh" value="high">High · Real-time 3 Mirrors</option>
+                <option id="optMirrorLow" value="low">Medium · Balanced</option>
+                <option id="optMirrorOff" value="off">Low · Save power</option>
+              </select>
+            </label>
+
+            <label class="toggle-card">
+              <input id="settingTouchControls" type="checkbox" />
+              <span id="lblTouchControls">Show mobile touch controls</span>
+            </label>
+
+            <!-- GaimenGo Live Acceleration Curve SVG Card -->
+            <div class="curveCard" aria-label="Acceleration curve chart">
+              <div class="curveCardHeader">
+                <div class="curveCardTitle">
+                  <strong id="curveTitle">Acceleration Curve</strong>
+                  <span id="curveDesc">X axis is throttle input, Y axis is drive output</span>
+                </div>
+                <span id="accelCurveValue" class="curveValue">1.35</span>
+              </div>
+              <div class="curveSliderRow">
+                <span id="curveSoftLbl" class="curveSliderLabel">Soft</span>
+                <input id="accelCurve" type="range" min="80" max="180" step="1" value="135" />
+                <span id="curveDirectLbl" class="curveSliderLabel">Direct</span>
+              </div>
+              <svg id="accelCurveChart" class="curveChart" viewBox="0 0 220 136" role="img">
+                <rect class="curveChartFrame" x="16" y="10" width="188" height="104" rx="14" />
+                <path
+                  class="curveChartGrid"
+                  d="M32 108H188 M32 86H188 M32 64H188 M32 42H188 M32 20V108 M71 20V108 M110 20V108 M149 20V108 M188 20V108"
+                />
+                <path class="curveChartAxis" d="M32 108H188 M32 108V20" />
+                <polyline id="accelCurveLine" class="curveChartLine" points="32,108 188,20" />
+                <line id="accelCurveGuideX" class="curveChartGuide" x1="32" y1="108" x2="32" y2="108" />
+                <line id="accelCurveGuideY" class="curveChartGuide" x1="32" y1="108" x2="32" y2="108" />
+                <circle id="accelCurveDot" class="curveChartDot" cx="32" cy="108" r="4.8" />
+                <text x="32" y="124" text-anchor="middle">0%</text>
+                <text x="110" y="124" text-anchor="middle">50%</text>
+                <text x="188" y="124" text-anchor="middle">100%</text>
+                <text x="24" y="111" text-anchor="end">0</text>
+                <text x="24" y="67" text-anchor="end">50</text>
+                <text x="24" y="24" text-anchor="end">100</text>
+              </svg>
+              <div class="curveMeta">
+                <span><span id="curveInputLbl">Current Input</span> <strong id="accelCurveInputValue">0%</strong></span>
+                <span><span id="curveOutputLbl">Current Output</span> <strong id="accelCurveOutputValue">0%</strong></span>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Fold 3: Map Editor & Spawn -->
+        <details class="settingsFold">
+          <summary id="foldMapTitle">Map editor &amp; spawn (マップ編集・開始位置)</summary>
+          <div class="settingsFoldBody">
+            <div class="controlGrid two-col">
+              <label class="file-label action-btn">
+                <span id="uploadMapText">Upload Map</span>
+                <input id="mapInput" type="file" accept="image/*" />
+              </label>
+              <button id="setSpawnBtn" type="button" class="action-btn">Set Spawn</button>
+              <button id="viewBtn" type="button" class="action-btn">Change View</button>
+              <button id="copyMapJsonBtn" type="button" class="action-btn">Copy JSON</button>
+            </div>
+            <div class="controlGrid">
+              <label class="control-field">
+                <span id="lblCustomWidth">Map Width (m)</span>
+                <input id="mapWidth" type="number" min="40" max="1500" step="1" value="180" />
+              </label>
+              <div class="range-card control-range">
+                <span id="lblMapScale">Map Scale</span>
+                <input id="mapScale" type="range" min="40" max="1500" step="1" value="180" />
+                <span id="mapScaleValue" class="control-value">180 m</span>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Fold 4: How to drive -->
+        <details class="settingsFold">
+          <summary id="foldHelpTitle">How to drive (操作ガイド)</summary>
+          <div class="settingsFoldBody">
+            <div id="tipsContainer" class="tips"></div>
+            <p id="helpMiniMapText" style="margin:4px 0 0;color:#93a8b6;"></p>
+          </div>
+        </details>
+
+        <!-- Fold 5: Driving Details -->
+        <details class="settingsFold">
+          <summary id="foldDataTitle">Driving details (走行データ)</summary>
+          <div class="settingsFoldBody">
+            <div class="telemetryList">
+              <div><span id="lblTelView">View:</span> <strong id="viewMode">Chase View</strong></div>
+              <div><span id="lblTelPos">Position:</span> <strong id="position">0.0, 0.0</strong></div>
+              <div><span id="lblTelHead">Heading:</span> <strong id="heading">0.0° / 0.0000 rad</strong></div>
+              <div><span id="lblTelSteer">Steering:</span> <strong id="steerAngle">0</strong>°</div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Fold 6: Built-in Japanese Test Center Courses -->
+        <details class="settingsFold">
+          <summary id="foldCoursesTitle">Built-in Test Center Courses (試験場コース一覧)</summary>
+          <div class="settingsFoldBody">
+            <ul id="courseQuickList" class="courseList"></ul>
+          </div>
+        </details>
+      </div>
+
+      <div class="driveActions">
+        <button id="startDrivingBtn" type="button" class="startDriving">Start driving / 運転を始める</button>
+        <button id="resetBtn" type="button" class="action-btn">Reset Vehicle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three Live PiP Mirror Panes (Chase top-center, Cockpit windshield layout) -->
+  <div id="mirrorHud" aria-hidden="true">
+    <div class="mirrorPane" id="mirrorLeft">
+      <span class="mirrorLabel" id="lblMirrorL">Left Mirror</span>
+    </div>
+    <div class="mirrorPane mirrorCenter" id="mirrorCenter">
+      <span class="mirrorLabel" id="lblMirrorC">Center Mirror</span>
+    </div>
+    <div class="mirrorPane" id="mirrorRight">
+      <span class="mirrorLabel" id="lblMirrorR">Right Mirror</span>
+    </div>
+  </div>
+
+  <!-- Cockpit Turn Signal Lamps -->
+  <div id="cockpitSignalHud" aria-hidden="true">
+    <div class="cockpitSignalLamp" id="cockpitLampLeft" data-direction="left">← Left</div>
+    <div class="cockpitSignalLamp" id="cockpitLampRight" data-direction="right">Right →</div>
+  </div>
+
+  <!-- MT Stall Warning -->
+  <div id="stallBanner" class="stall-banner" hidden>
+    <span id="stallText">Engine Stalled! Press [I] to restart</span>
+    <button id="stallRestartBtn" type="button">Start Engine (I)</button>
+  </div>
+
+  <!-- Reset Toast -->
+  <div id="resetToast" class="resetToast" role="status">
+    <span id="resetToastText">Back to the start — try again!</span>
+  </div>
+
+  <!-- Bottom-Left Telemetry Status & Center Floating Wheel HUD -->
+  <div id="hud">
+    <div id="violationToasts" class="violation-toasts"></div>
+    <div class="status">
+      <div class="speedCard"><span id="speed">0.0</span> <span>km/h</span></div>
+      <div class="gearCard" id="gearCardBtn" title="Click or press Shift/Ctrl to change gear">
+        <span id="gear">D</span>
+      </div>
+      <div class="scoreCard">
+        <span id="hudScore" class="score-num">100</span>
+        <span>PTS</span>
+        <span id="hudModePill" style="color:#93c5fd;font-weight:700;">自由練習</span>
+      </div>
+      <div id="signalStatusBox" data-signal="off">
+        <span id="lblHudSignal">Signal:</span> <span id="signalStatus">Off</span>
+      </div>
+      <div class="wheelMiniGrid" title="4-Wheel Curb Proximity">
+        <div id="wheelFL" class="wheel-pip"></div>
+        <div id="wheelFR" class="wheel-pip"></div>
+        <div id="wheelRL" class="wheel-pip"></div>
+        <div id="wheelRR" class="wheel-pip"></div>
+      </div>
+      <div class="directiveCard" id="hudDirective"></div>
+    </div>
+  </div>
+
+  <!-- Translucent 3-Spoke Wheel HUD -->
+  <div id="wheelHud" aria-hidden="true">
+    <div class="wheelHudTopMark"></div>
+    <div id="wheelHudDial">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="44" stroke="#d4dfe8" stroke-width="7" stroke-opacity="0.9" />
+        <line x1="50" y1="41" x2="50" y2="9.5" stroke="#c8d5e0" stroke-width="7" stroke-linecap="round" stroke-opacity="0.88" />
+        <line x1="57.8" y1="54.5" x2="85.1" y2="70.3" stroke="#c8d5e0" stroke-width="7" stroke-linecap="round" stroke-opacity="0.88" />
+        <line x1="42.2" y1="54.5" x2="14.9" y2="70.3" stroke="#c8d5e0" stroke-width="7" stroke-linecap="round" stroke-opacity="0.88" />
+        <circle cx="50" cy="50" r="11" fill="#059669" stroke="#34d399" stroke-width="2" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- Bottom-Right Expandable 3D Mini Map -->
+  <div id="miniMap" role="button" tabindex="0" aria-label="Click to expand mini map">
+    <span class="miniMapLabel" id="lblMiniMap">Mini Map</span>
+    <span class="miniMapHint" id="lblMiniMapHint">
+      Hold and drag to pan. Wheel to zoom. Click any point on the course to teleport there.
+    </span>
+    <button id="miniMapClose" type="button" aria-label="Close mini map">×</button>
+  </div>
+
+  <!-- First-Run Bottom Hint -->
+  <div id="firstRunHint" class="firstRunHint" aria-live="polite">
+    <button id="firstRunHintClose" type="button" aria-label="Close tips">×</button>
+    <strong id="firstRunTitle">Start driving</strong>
+    <span id="firstRunText">
+      WASD or arrow keys drive, Q/E signals, Space brakes, Z/X look left &amp; right, V changes view, O resets.
+    </span>
+  </div>
+
+  <!-- Mobile Controls -->
+  <div id="mobileControls" hidden aria-label="Mobile driving controls">
+    <div class="mobileCluster">
+      <div class="mobileSteerZone" id="mobileSteerZone" data-touch="steer">
+        <div class="mobileSteerIndicator" id="mobileSteerIndicator" data-touch="steer-knob"></div>
+        <span id="lblMobileSteerHint" class="mobileSteerHint">← Swipe to steer →</span>
+      </div>
+    </div>
+
+    <div class="mobileCluster">
+      <div id="signalLever" class="mobileSignalLever">
+        <span id="lblMobileSigL" class="signalLeverLabel" data-touch-action="blinker-left">↑ Left</span>
+        <div class="signalLeverKnob"></div>
+        <span id="lblMobileSigR" class="signalLeverLabel" data-touch-action="blinker-right">Right ↓</span>
+      </div>
+      <div class="mobileDriveStack">
+        <button id="lblMobileGear" class="mobileControl mobileReverse" data-touch-action="gear-down" type="button">Gear</button>
+        <button id="lblMobileBrake" class="mobileControl mobileBrake" data-touch="brake" type="button">Brake</button>
+        <button id="lblMobileThrottle" class="mobileControl mobileThrottle" data-touch="throttle" type="button">Throttle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exam Completion Score Sheet Modal -->
+  <div id="examResultModal" class="modal-backdrop" hidden>
+    <div class="modal-card">
+      <div class="exam-top-row">
+        <div>
+          <h2 id="examResultTitle" style="margin:0 0 4px;">Practical Driving Exam Score Sheet</h2>
+          <p id="examResultSub" style="margin:0;font-size:13px;color:#94a3b8;"></p>
+        </div>
+        <div id="examStamp" class="exam-stamp pass">合格</div>
+      </div>
+      <div class="exam-stats">
+        <div class="stat-cell">
+          <span id="examScoreLabelText">Final Score</span>
+          <strong id="examFinalScore">100 / 100</strong>
+        </div>
+        <div class="stat-cell">
+          <span id="examElapsedLabelText">Time</span>
+          <strong id="examElapsed">0:00</strong>
+        </div>
+        <div class="stat-cell">
+          <span id="examDistanceLabelText">Distance</span>
+          <strong id="examDistance">0 m</strong>
+        </div>
+      </div>
+      <ul id="examViolationList" class="exam-violations"></ul>
+      <div class="modal-actions">
+        <button id="examCloseBtn" class="action-btn" type="button">Continue Practice</button>
+        <button id="examPracticeWeakBtn" class="action-btn" type="button">Practice Weak Area</button>
+        <button id="examRetryBtn" class="startDriving" style="padding:10px 18px;border-radius:10px;" type="button">
+          Retry Exam
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="speedVignette" aria-hidden="true"></div>
+  <div id="speedBlur" aria-hidden="true"></div>
+  <canvas id="simCanvas"></canvas>
+</body>
+</html>
