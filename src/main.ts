@@ -22,6 +22,14 @@ import { InputManager } from './input/InputManager';
 import { CameraSystem } from './scene/CameraSystem';
 import { BUILTIN_COURSE_PRESETS, CustomMapLayer } from './scene/CustomMapLayer';
 import {
+  CustomRouteTrainer,
+  type AutoTraceColor,
+  type RouteMemoryMode,
+  type RouteStamp,
+  type RouteStampKind,
+  type RouteWaypoint,
+} from './scene/CustomRouteTrainer';
+import {
   buildVehicleModel,
   syncVehicleVisual,
   type VehicleVisualHandle,
@@ -57,6 +65,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
 const world = new WorldBuilder(scene);
 const customMapLayer = new CustomMapLayer(scene);
+const routeTrainer = new CustomRouteTrainer(scene);
 const signals = new TrafficSignalController();
 const examiner = new ExaminerEngine();
 const audio = new AudioEngine();
@@ -328,7 +337,11 @@ function selectCoursePreset(presetId: string) {
 
 function resetVehicle() {
   audio.unlock();
-  if (selectedPresetId === 'kyoshujo-3d') {
+  routeTrainer.resetProgress();
+  const routeStart = routeTrainer.getStartPose();
+  if (routeTrainer.hasRoute() && routeStart) {
+    spawnAtPose(routeStart.x, routeStart.z, routeStart.heading, 'practice');
+  } else if (selectedPresetId === 'kyoshujo-3d') {
     warpToStation(currentStation, examiner.getMode());
   } else {
     selectCoursePreset(selectedPresetId);
@@ -1007,6 +1020,319 @@ document.getElementById('quickLangJaBtn')!.addEventListener('click', () => setLo
 document.getElementById('panelLangEnBtn')!.addEventListener('click', () => setLocale('en'));
 document.getElementById('panelLangJaBtn')!.addEventListener('click', () => setLocale('ja'));
 
+// ==========================================================
+// Interactive Route Builder & Memorization Trainer Controller
+// ==========================================================
+const rbModalEl = document.getElementById('routeBuilderModal')!;
+const rbCanvas = document.getElementById('routeBuilderCanvas') as HTMLCanvasElement;
+const rbCtx = rbCanvas.getContext('2d')!;
+const rbStatusEl = document.getElementById('rbStatusText')!;
+const rbUploadInput = document.getElementById('rbUploadInput') as HTMLInputElement;
+
+type RbTool = 'waypoint' | 'stopSign' | 'trafficLight' | 'pole';
+let activeRbTool: RbTool = 'waypoint';
+let draftWaypoints: RouteWaypoint[] = [];
+let draftStamps: RouteStamp[] = [];
+let rbHistory: { waypoints: RouteWaypoint[]; stamps: RouteStamp[] }[] = [];
+
+function getActiveWorldBounds(): { width: number; height: number } {
+  if (courseMode === 'custom') {
+    return customMapLayer.currentSize;
+  }
+  return { width: COMPOUND_HALF_W * 2, height: COMPOUND_HALF_D * 2 };
+}
+
+function pushRbHistory() {
+  rbHistory.push({
+    waypoints: draftWaypoints.map((w) => ({ ...w })),
+    stamps: draftStamps.map((s) => ({ ...s })),
+  });
+  if (rbHistory.length > 30) rbHistory.shift();
+}
+
+function drawRouteBuilderCanvas() {
+  const W = rbCanvas.width;
+  const H = rbCanvas.height;
+  rbCtx.clearRect(0, 0, W, H);
+
+  const bounds = getActiveWorldBounds();
+  const mapSource = courseMode === 'custom' ? customMapLayer.getActiveSource() : null;
+
+  if (mapSource) {
+    rbCtx.drawImage(mapSource, 0, 0, W, H);
+  } else {
+    // Draw clean top-down blueprint of the 3D Kyoshujo compound
+    rbCtx.fillStyle = '#1e2f23';
+    rbCtx.fillRect(0, 0, W, H);
+    const toPx = (wx: number, wz: number): [number, number] => [
+      ((wx / bounds.width) + 0.5) * W,
+      ((wz / bounds.height) + 0.5) * H,
+    ];
+    rbCtx.strokeStyle = '#475569';
+    rbCtx.lineWidth = 22;
+    rbCtx.lineCap = 'round';
+    rbCtx.strokeRect(W * 0.08, H * 0.12, W * 0.84, H * 0.76);
+    rbCtx.beginPath();
+    const [cx0, cz0] = toPx(0, -46);
+    const [cx1, cz1] = toPx(0, 46);
+    const [ex0, ez0] = toPx(-76, 0);
+    const [ex1, ez1] = toPx(76, 0);
+    rbCtx.moveTo(cx0, cz0);
+    rbCtx.lineTo(cx1, cz1);
+    rbCtx.moveTo(ex0, ez0);
+    rbCtx.lineTo(ex1, ez1);
+    rbCtx.stroke();
+  }
+
+  const worldToCanvas = (wx: number, wz: number): [number, number] => [
+    ((wx / bounds.width) + 0.5) * W,
+    ((wz / bounds.height) + 0.5) * H,
+  ];
+
+  // Draw route polyline & directional arrows
+  if (draftWaypoints.length >= 2) {
+    rbCtx.save();
+    rbCtx.strokeStyle = '#34d399';
+    rbCtx.lineWidth = 5;
+    rbCtx.lineCap = 'round';
+    rbCtx.lineJoin = 'round';
+    rbCtx.beginPath();
+    draftWaypoints.forEach((wp, i) => {
+      const [px, py] = worldToCanvas(wp.x, wp.z);
+      if (i === 0) rbCtx.moveTo(px, py);
+      else rbCtx.lineTo(px, py);
+    });
+    rbCtx.stroke();
+
+    // Directional arrowheads along segments
+    for (let i = 0; i < draftWaypoints.length - 1; i++) {
+      const [ax, ay] = worldToCanvas(draftWaypoints[i].x, draftWaypoints[i].z);
+      const [bx, by] = worldToCanvas(draftWaypoints[i + 1].x, draftWaypoints[i + 1].z);
+      const mx = (ax + bx) * 0.5;
+      const my = (ay + by) * 0.5;
+      const ang = Math.atan2(by - ay, bx - ax);
+      rbCtx.save();
+      rbCtx.translate(mx, my);
+      rbCtx.rotate(ang);
+      rbCtx.fillStyle = '#fde047';
+      rbCtx.beginPath();
+      rbCtx.moveTo(8, 0);
+      rbCtx.lineTo(-6, -5);
+      rbCtx.lineTo(-6, 5);
+      rbCtx.closePath();
+      rbCtx.fill();
+      rbCtx.restore();
+    }
+    rbCtx.restore();
+  }
+
+  // Draw numbered waypoints
+  draftWaypoints.forEach((wp, i) => {
+    const [px, py] = worldToCanvas(wp.x, wp.z);
+    rbCtx.beginPath();
+    rbCtx.arc(px, py, 13, 0, Math.PI * 2);
+    rbCtx.fillStyle = i === 0 ? '#059669' : i === draftWaypoints.length - 1 ? '#d62828' : '#005bac';
+    rbCtx.fill();
+    rbCtx.lineWidth = 2.5;
+    rbCtx.strokeStyle = '#ffffff';
+    rbCtx.stroke();
+
+    rbCtx.fillStyle = '#ffffff';
+    rbCtx.font = 'bold 12px sans-serif';
+    rbCtx.textAlign = 'center';
+    rbCtx.textBaseline = 'middle';
+    const label = i === 0 ? 'S' : i === draftWaypoints.length - 1 ? 'G' : String(i);
+    rbCtx.fillText(label, px, py);
+  });
+
+  // Draw stamped 3D obstacles
+  for (const st of draftStamps) {
+    const [px, py] = worldToCanvas(st.x, st.z);
+    rbCtx.save();
+    rbCtx.translate(px, py);
+    rbCtx.fillStyle =
+      st.kind === 'stopSign' ? '#dc2626' : st.kind === 'trafficLight' ? '#f59e0b' : '#ec4899';
+    rbCtx.beginPath();
+    rbCtx.arc(0, 0, 11, 0, Math.PI * 2);
+    rbCtx.fill();
+    rbCtx.strokeStyle = '#fff';
+    rbCtx.lineWidth = 2;
+    rbCtx.stroke();
+    rbCtx.fillStyle = '#fff';
+    rbCtx.font = 'bold 10px sans-serif';
+    rbCtx.textAlign = 'center';
+    rbCtx.textBaseline = 'middle';
+    rbCtx.fillText(st.kind === 'stopSign' ? '止' : st.kind === 'trafficLight' ? '信' : 'P', 0, 0);
+    rbCtx.restore();
+  }
+
+  rbStatusEl.textContent =
+    settings.locale === 'ja'
+      ? `ポイント: ${draftWaypoints.length}点 ／ 3D標識: ${draftStamps.length}個`
+      : `Waypoints: ${draftWaypoints.length} · 3D Stamps: ${draftStamps.length}`;
+}
+
+function openRouteBuilder() {
+  audio.unlock();
+  const current = routeTrainer.getData();
+  draftWaypoints = current.waypoints.map((w) => ({ ...w }));
+  draftStamps = current.stamps.map((s) => ({ ...s }));
+  rbHistory = [];
+  rbModalEl.hidden = false;
+  drawRouteBuilderCanvas();
+}
+
+document.getElementById('openRouteBuilderBtn')!.addEventListener('click', openRouteBuilder);
+document.getElementById('quickRouteBuilderBtn')!.addEventListener('click', openRouteBuilder);
+document.getElementById('rbCloseBtn')!.addEventListener('click', () => {
+  rbModalEl.hidden = true;
+});
+
+// Tool selection inside Route Builder
+document.querySelectorAll<HTMLButtonElement>('[data-rb-tool]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    activeRbTool = (btn.dataset.rbTool as RbTool) || 'waypoint';
+    document.querySelectorAll<HTMLButtonElement>('[data-rb-tool]').forEach((b) => {
+      b.classList.toggle('active', b === btn);
+    });
+  });
+});
+
+// Click on Route Builder Canvas to place Waypoint or 3D Stamp
+rbCanvas.addEventListener('click', (ev) => {
+  const rect = rbCanvas.getBoundingClientRect();
+  const nx = (ev.clientX - rect.left) / Math.max(1, rect.width);
+  const ny = (ev.clientY - rect.top) / Math.max(1, rect.height);
+  const bounds = getActiveWorldBounds();
+  const wx = (nx - 0.5) * bounds.width;
+  const wz = (ny - 0.5) * bounds.height;
+
+  pushRbHistory();
+
+  if (activeRbTool === 'waypoint') {
+    draftWaypoints.push({ x: wx, z: wz, turn: 'straight' });
+  } else {
+    // Orient stamp facing along latest route segment
+    let heading = 0;
+    if (draftWaypoints.length >= 1) {
+      const last = draftWaypoints[draftWaypoints.length - 1];
+      heading = Math.atan2(-(wx - last.x), -(wz - last.z));
+    }
+    draftStamps.push({ kind: activeRbTool as RouteStampKind, x: wx, z: wz, heading });
+  }
+  drawRouteBuilderCanvas();
+});
+
+document.getElementById('rbUndoBtn')!.addEventListener('click', () => {
+  const prev = rbHistory.pop();
+  if (!prev) return;
+  draftWaypoints = prev.waypoints;
+  draftStamps = prev.stamps;
+  drawRouteBuilderCanvas();
+});
+
+document.getElementById('rbClearBtn')!.addEventListener('click', () => {
+  pushRbHistory();
+  draftWaypoints = [];
+  draftStamps = [];
+  drawRouteBuilderCanvas();
+});
+
+// Upload Route Image directly inside Route Builder
+rbUploadInput.addEventListener('change', () => {
+  const file = rbUploadInput.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const dataUrl = String(reader.result);
+    const width = Math.max(80, Number(mapWidthEl.value) || 260);
+    const cfg: CustomMapConfig = {
+      imageDataUrl: dataUrl,
+      fileName: file.name,
+      mapWidth: width,
+      startX: 0,
+      startZ: 0,
+      startHeading: 0,
+    };
+    customMapConfig = cfg;
+    await customMapLayer.loadFromDataUrl(cfg.imageDataUrl, cfg.mapWidth);
+    await saveCustomMap(cfg);
+    selectedPresetId = 'custom';
+    courseMode = 'custom';
+    world.setKyoshujoVisible(false);
+    customMapLayer.setVisible(true);
+    renderStationAndCourseLists();
+    drawRouteBuilderCanvas();
+  };
+  reader.readAsDataURL(file);
+});
+
+// Auto-Detect Colored Route Line from Uploaded Map Image
+document.querySelectorAll<HTMLButtonElement>('[data-trace-color]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const color = (btn.dataset.traceColor as AutoTraceColor) || 'red';
+    const src = customMapLayer.getActiveSource();
+    if (!src) {
+      rbStatusEl.textContent =
+        settings.locale === 'ja'
+          ? '先にコース図画像をアップロードしてください'
+          : 'Please upload a route map image first';
+      return;
+    }
+    const bounds = getActiveWorldBounds();
+    const extracted = routeTrainer.autoExtractRouteFromImage(src, bounds.width, color);
+    if (extracted.length < 2) {
+      rbStatusEl.textContent =
+        settings.locale === 'ja'
+          ? '色線が見つかりませんでした。地図上をクリックしてルート点を追加してください'
+          : 'No matching colored line found — click directly on the map to trace points';
+      return;
+    }
+    pushRbHistory();
+    draftWaypoints = extracted;
+    drawRouteBuilderCanvas();
+  });
+});
+
+// Save & Start Route Practice
+document.getElementById('rbSaveAndDriveBtn')!.addEventListener('click', () => {
+  routeTrainer.setRouteData({ waypoints: draftWaypoints, stamps: draftStamps }, true);
+  rbModalEl.hidden = true;
+  setUiCollapsed(true);
+  const startPose = routeTrainer.getStartPose();
+  if (startPose) {
+    if (customMapConfig && courseMode === 'custom') {
+      customMapConfig.startX = startPose.x;
+      customMapConfig.startZ = startPose.z;
+      customMapConfig.startHeading = startPose.heading;
+      void saveCustomMap(customMapConfig);
+    }
+    spawnAtPose(startPose.x, startPose.z, startPose.heading, 'practice');
+  }
+});
+
+// 3-Stage Memory Mode Switcher (Guided / Memory Test Blind / Auto-Drive Demo)
+function setRouteMemoryMode(mode: RouteMemoryMode) {
+  routeTrainer.setMemoryMode(mode);
+  document.querySelectorAll<HTMLButtonElement>('[data-memory-mode]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.memoryMode === mode);
+  });
+  if (mode === 'autodrive' && routeTrainer.hasRoute()) {
+    const startPose = routeTrainer.getStartPose();
+    if (startPose) {
+      spawnAtPose(startPose.x, startPose.z, startPose.heading, 'practice');
+      routeTrainer.resetProgress();
+    }
+  }
+}
+
+document.querySelectorAll<HTMLButtonElement>('[data-memory-mode]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const m = (btn.dataset.memoryMode as RouteMemoryMode) || 'guided';
+    setRouteMemoryMode(m);
+  });
+});
+
 // Restore saved custom map if present
 void loadCustomMap().then(async (cfg) => {
   if (cfg) {
@@ -1041,14 +1367,19 @@ function animate(nowMs: number) {
   const baseSpec = getVehicleSpec(settings.vehicleKind);
   const spec = { ...baseSpec, maxSpeedMs: userMaxSpeedMs };
   const rawInput = inputMgr.getInputState();
+
+  // Check if Custom Route Trainer is active (and whether Auto-Drive Demo is controlling the car)
+  const routeStatus = routeTrainer.update(frameDt, vehicleState, signals, settings.locale, simTimeSec);
+  const activeInput = routeStatus.autoDriveInput ?? rawInput;
+
   // Apply live Acceleration Curve exponent to throttle input
   const shapedInput = {
-    ...rawInput,
-    throttle: rawInput.throttle > 0 ? Math.pow(rawInput.throttle, accelCurveExp) : 0,
+    ...activeInput,
+    throttle: activeInput.throttle > 0 ? Math.pow(activeInput.throttle, accelCurveExp) : 0,
   };
 
   if (!uiCollapsed) {
-    updateAccelCurveMarker(rawInput.throttle);
+    updateAccelCurveMarker(activeInput.throttle);
   }
 
   let latestCollision: CollisionReport = checkCourseCollisions(vehicleState, spec);
@@ -1183,7 +1514,9 @@ function animate(nowMs: number) {
   hudModePillEl.textContent = isExam ? t(settings.locale, 'modeExam') : t(settings.locale, 'modePractice');
 
   const prog = examiner.getWaypointProgress();
-  if (courseMode === 'custom') {
+  if (routeStatus.bannerText) {
+    hudDirectiveEl.textContent = routeStatus.bannerText;
+  } else if (courseMode === 'custom') {
     const preset = BUILTIN_COURSE_PRESETS.find((p) => p.id === selectedPresetId);
     hudDirectiveEl.textContent = preset
       ? isJa

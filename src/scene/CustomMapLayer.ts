@@ -98,11 +98,16 @@ export class CustomMapLayer {
   public readonly group = new THREE.Group();
   private mesh: THREE.Mesh | null = null;
   private texture: THREE.Texture | null = null;
+  private activeSource: HTMLImageElement | HTMLCanvasElement | null = null;
   public currentSize = { width: 180, height: 120 };
 
   constructor(scene: THREE.Scene) {
     this.group.visible = false;
     scene.add(this.group);
+  }
+
+  getActiveSource(): HTMLImageElement | HTMLCanvasElement | null {
+    return this.activeSource;
   }
 
   async loadFromDataUrl(dataUrl: string, mapWidthMeters: number): Promise<void> {
@@ -206,6 +211,7 @@ export class CustomMapLayer {
     mapWidthMeters: number
   ): void {
     this.disposeCurrent();
+    this.activeSource = source;
 
     const tex = new THREE.Texture(source);
     tex.colorSpace = THREE.SRGBColorSpace;
