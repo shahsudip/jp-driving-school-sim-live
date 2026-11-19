@@ -98,4 +98,26 @@ describe('vehiclePhysics', () => {
     expect(state.speedMs).toBeLessThan(-1.0);
     expect(state.x).toBeLessThan(25.3);
   });
+
+  it('ramps steering rate and throttle force progressively with key hold time (time-lapse response)', () => {
+    const opts = { steeringSensitivity: 1, autoCenterSteering: false, simTimeSec: 0 };
+
+    // A short 0.1s tap on steerLeft turns the wheel much less per frame than holding it past 0.6s
+    const tapState = createVehicleState(0, 0, 0, 'sedan', 'AT');
+    for (let i = 0; i < 6; i++) {
+      stepVehiclePhysics(tapState, neutralInput({ steerLeft: 1 }), SEDAN_SPEC, 1 / 60, opts);
+    }
+    const avgSteerRateEarly = tapState.steerAngleRad / (6 / 60);
+
+    for (let i = 0; i < 18; i++) {
+      stepVehiclePhysics(tapState, neutralInput({ steerLeft: 1 }), SEDAN_SPEC, 1 / 60, opts);
+    }
+    const beforeLate = tapState.steerAngleRad;
+    for (let i = 0; i < 6; i++) {
+      stepVehiclePhysics(tapState, neutralInput({ steerLeft: 1 }), SEDAN_SPEC, 1 / 60, opts);
+    }
+    const avgSteerRateLate = (tapState.steerAngleRad - beforeLate) / (6 / 60);
+
+    expect(avgSteerRateLate).toBeGreaterThan(avgSteerRateEarly * 1.5);
+  });
 });

@@ -129,6 +129,9 @@ export interface VehicleState {
   odometerM: number;
   preDrive: PreDriveChecklistState;
   mirrorTouchTimer: number; // > 0 when avatar reaches up to adjust mirror
+  steerHoldSec: number; // Time-elapsed hold counter for progressive steering rate
+  throttleHoldSec: number; // Time-elapsed hold counter for progressive throttle pedal ramp
+  brakeHoldSec: number; // Time-elapsed hold counter for progressive brake pedal pressure
 }
 
 export interface InputState {

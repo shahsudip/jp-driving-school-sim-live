@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import './ui/styles.css';
 import { AudioEngine } from './audio/AudioEngine';
+import { VoiceExaminer } from './audio/VoiceExaminer';
 import { checkCourseCollisions, type CollisionReport } from './core/collision';
 import {
   COMPOUND_HALF_D,
@@ -73,6 +74,7 @@ const routeTrainer = new CustomRouteTrainer(scene);
 const signals = new TrafficSignalController();
 const examiner = new ExaminerEngine();
 const audio = new AudioEngine();
+const voiceExaminer = new VoiceExaminer();
 
 const settings: UserSettings = loadSettings();
 const isTouchDevice = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
@@ -1111,6 +1113,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-rb-tab]').forEach((btn) => {
 examiner.onViolation = (v) => {
   pushViolationToast(v);
   audio.playViolationChime(v.instantFail);
+  voiceExaminer.announceViolation(v, settings.locale);
   if (strictRuleFreezeChk.checked) {
     showViolationFreezeOverlay(v);
   }
@@ -1720,6 +1723,7 @@ let accumulator = 0;
 let lastFrameMs = performance.now();
 let simTimeSec = 0;
 let lastThudTime = -999;
+let lastSpokenWaypointId = '';
 
 function animate(nowMs: number) {
   requestAnimationFrame(animate);
@@ -1806,6 +1810,12 @@ function animate(nowMs: number) {
 
   const wp = examiner.getCurrentWaypoint();
   const examTarget = wp ? { x: wp.x, z: wp.z } : null;
+  if (wp && wp.id !== lastSpokenWaypointId) {
+    lastSpokenWaypointId = wp.id;
+    voiceExaminer.speak(wp.instructionJa, wp.instructionEn, settings.locale);
+  } else if (!wp) {
+    lastSpokenWaypointId = '';
+  }
 
   syncVehicleVisual(vehicleHandle, vehicleState, settings.vehicleKind);
   world.updateShadowFocus(vehicleState.x, vehicleState.z);

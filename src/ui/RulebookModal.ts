@@ -1,6 +1,9 @@
 import type { Locale } from '../types';
+import { WrittenExamController } from './WrittenExamSimulator';
 
-export type RulebookTabId = 'predrive' | 'compound' | 'road' | 'signs' | 'written';
+export type RulebookTabId = 'predrive' | 'compound' | 'road' | 'signs' | 'written' | 'mock50';
+
+const writtenExamCtrl = new WrittenExamController();
 
 interface SignSpec {
   id: string;
@@ -569,6 +572,11 @@ export function renderRulebookContent(container: HTMLElement, tab: RulebookTabId
       card.append(canvas, body);
       grid.append(card);
     }
+    return;
+  }
+
+  if (tab === 'mock50') {
+    writtenExamCtrl.render(container, locale);
     return;
   }
 

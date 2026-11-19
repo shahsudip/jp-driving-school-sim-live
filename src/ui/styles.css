@@ -2210,3 +2210,127 @@ body.minimap-expanded #preDriveBar {
   color: #93c5fd;
   font-weight: 700;
 }
+
+/* ===== Interactive 50-Question Written Exam Tab ===== */
+.wx-header-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  border-radius: 12px;
+  background: rgba(5, 150, 105, 0.2);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  margin-bottom: 12px;
+}
+
+.wx-questions-list {
+  display: grid;
+  gap: 10px;
+}
+
+.wx-q-card {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.wx-q-card.answered-correct {
+  border-color: #34d399;
+  background: rgba(5, 150, 105, 0.12);
+}
+
+.wx-q-card.answered-wrong {
+  border-color: #f87171;
+  background: rgba(220, 38, 38, 0.12);
+}
+
+.wx-q-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.wx-q-num {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.wx-q-chap {
+  font-size: 11.5px;
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+.wx-q-badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.wx-q-badge.pass {
+  background: rgba(5, 150, 105, 0.35);
+  color: #a7f3d0;
+}
+
+.wx-q-badge.fail {
+  background: rgba(220, 38, 38, 0.35);
+  color: #fecaca;
+}
+
+.wx-q-ja {
+  margin: 0 0 3px;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: #f8fafc;
+  line-height: 1.45;
+}
+
+.wx-q-en {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.wx-q-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.wx-ans-btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f1f5f9;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wx-ans-btn.selected {
+  border-color: #60a5fa;
+  background: rgba(37, 99, 235, 0.38);
+  color: #fff;
+}
+
+.wx-q-exp {
+  margin-top: 9px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.65);
+  border-left: 3px solid #60a5fa;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #e2e8f0;
+}

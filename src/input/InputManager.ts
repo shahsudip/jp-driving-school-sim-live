@@ -18,6 +18,7 @@ export class InputManager {
   private touchLookLeft = false;
   private touchLookRight = false;
   private analogSteer: number | null = null;
+  private prevGamepadBtns: boolean[] = [];
   private readonly actions: InputActions;
 
   constructor(actions: InputActions) {
@@ -170,15 +171,60 @@ export class InputManager {
     const keyRight = this.keys.has('KeyD') || this.keys.has('ArrowRight') ? 1 : 0;
     const clutch = this.keys.has('KeyC') ? 1 : 0;
 
+    // Poll Web Gamepad API (USB Racing Wheel + Pedals / Gamepad Controller)
+    let gpSteer: number | null = null;
+    let gpThrottle = 0;
+    let gpBrake = 0;
+    let gpClutch = 0;
+    let gpLookLeft = false;
+    let gpLookRight = false;
+
+    if (typeof navigator !== 'undefined' && 'getGamepads' in navigator) {
+      const pads = navigator.getGamepads();
+      const gp = pads.find((p) => p && p.connected);
+      if (gp) {
+        // Axis 0: Steering wheel (-1 left .. +1 right); our analogSteerTarget uses +left, -right
+        const rawWheel = gp.axes[0] ?? 0;
+        if (Math.abs(rawWheel) > 0.04) {
+          gpSteer = -rawWheel;
+        }
+        // Standard triggers (buttons 7 = R2 throttle, 6 = L2 brake) or racing pedal axes
+        const r2 = gp.buttons[7]?.value ?? 0;
+        const l2 = gp.buttons[6]?.value ?? 0;
+        gpThrottle = r2;
+        gpBrake = l2;
+        if (gp.axes.length >= 3 && r2 === 0 && l2 === 0) {
+          // Dedicated wheel pedal axes (Logitech G29/G923: axis 1/2/5)
+          const aThrottle = gp.axes[2] !== undefined ? (1 - gp.axes[2]) * 0.5 : 0;
+          const aBrake = gp.axes[5] !== undefined ? (1 - gp.axes[5]) * 0.5 : 0;
+          if (aThrottle > 0.05) gpThrottle = aThrottle;
+          if (aBrake > 0.05) gpBrake = aBrake;
+        }
+        // Edge-triggered button actions (L1/LB = Left blinker, R1/RB = Right blinker, Y = Camera, A = Handbrake)
+        const isPressed = (idx: number) => Boolean(gp.buttons[idx]?.pressed);
+        const justPressed = (idx: number) => isPressed(idx) && !this.prevGamepadBtns[idx];
+        if (justPressed(4)) this.actions.onToggleBlinker('left');
+        if (justPressed(5)) this.actions.onToggleBlinker('right');
+        if (justPressed(0)) this.actions.onToggleHandbrake();
+        if (justPressed(3)) this.actions.onCycleCamera();
+        if (justPressed(1)) this.actions.onShiftGear(1);
+        if (justPressed(2)) this.actions.onShiftGear(-1);
+
+        gpLookLeft = isPressed(14); // D-pad Left
+        gpLookRight = isPressed(15); // D-pad Right
+        this.prevGamepadBtns = gp.buttons.map((b) => b.pressed);
+      }
+    }
+
     return {
-      throttle: Math.max(keyThrottle, this.touchThrottle),
-      brake: Math.max(keyBrake, this.touchBrake),
+      throttle: Math.max(keyThrottle, this.touchThrottle, gpThrottle),
+      brake: Math.max(keyBrake, this.touchBrake, gpBrake),
       steerLeft: keyLeft,
       steerRight: keyRight,
-      analogSteerTarget: this.analogSteer,
-      clutch,
-      lookLeft: this.keys.has('KeyZ') || this.touchLookLeft,
-      lookRight: this.keys.has('KeyX') || this.touchLookRight,
+      analogSteerTarget: this.analogSteer ?? gpSteer,
+      clutch: Math.max(clutch, gpClutch),
+      lookLeft: this.keys.has('KeyZ') || this.touchLookLeft || gpLookLeft,
+      lookRight: this.keys.has('KeyX') || this.touchLookRight || gpLookRight,
     };
   }
 

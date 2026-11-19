@@ -67,6 +67,9 @@ export function createVehicleState(
       completedSteps: [],
     },
     mirrorTouchTimer: 0,
+    steerHoldSec: 0,
+    throttleHoldSec: 0,
+    brakeHoldSec: 0,
   };
 }
 
@@ -114,20 +117,51 @@ export function stepVehiclePhysics(
 ): void {
   if (dt <= 0) return;
 
-  // 1. Steering input & caster auto-centering
-  const steerSpeed = 2.5 * options.steeringSensitivity;
+  // 1. Progressive time-elapsed Steering, Throttle & Brake ramp + Speed-sensitive steering limit
+  // Short key tap (< 0.15s) = gentle micro-adjustment; holding key ramps up smoothly over ~0.65s!
+  const netSteer = input.steerLeft - input.steerRight;
+  if (Math.abs(netSteer) > 0.01) {
+    // If reversing steering direction, reset hold ramp so counter-steering starts controlled
+    if (state.steerAngleRad * netSteer < -0.05 && state.steerHoldSec > 0.25) {
+      state.steerHoldSec = 0.2;
+    }
+    state.steerHoldSec = Math.min(1.2, (state.steerHoldSec || 0) + dt);
+  } else {
+    state.steerHoldSec = 0;
+  }
+
+  if (input.throttle > 0.02) {
+    state.throttleHoldSec = Math.min(1.5, (state.throttleHoldSec || 0) + dt);
+  } else {
+    state.throttleHoldSec = Math.max(0, (state.throttleHoldSec || 0) - dt * 3.0);
+  }
+
+  if (input.brake > 0.02) {
+    state.brakeHoldSec = Math.min(1.2, (state.brakeHoldSec || 0) + dt);
+  } else {
+    state.brakeHoldSec = Math.max(0, (state.brakeHoldSec || 0) - dt * 4.0);
+  }
+
+  // Time-lapse ramp factors:
+  // - Steering: starts at 32% speed on initial tap, smoothly ramps to 100% after 0.65s hold
+  const steerTimeRamp = 0.32 + 0.68 * Math.pow(Math.min(1, state.steerHoldSec / 0.65), 1.35);
+  // - Speed-sensitive dampening: slower steering rotation when driving fast (> 25 km/h) so car never twitches on straights
+  const absSpd = Math.abs(state.speedMs);
+  const speedSteerDamp = 1 / (1 + Math.max(0, absSpd - 3.5) * 0.11);
+  const baseSteerSpeed = 1.95 * options.steeringSensitivity;
+
   if (input.analogSteerTarget !== null) {
     const targetRad = Math.max(-1, Math.min(1, input.analogSteerTarget)) * spec.maxSteerRad;
     const diff = targetRad - state.steerAngleRad;
-    const maxStep = steerSpeed * 1.8 * dt;
+    const maxStep = baseSteerSpeed * 1.5 * dt;
     state.steerAngleRad += Math.abs(diff) <= maxStep ? diff : Math.sign(diff) * maxStep;
   } else {
-    const netSteer = input.steerLeft - input.steerRight;
     if (Math.abs(netSteer) > 0.01) {
-      state.steerAngleRad += netSteer * steerSpeed * dt;
+      const effectiveSteerRate = baseSteerSpeed * steerTimeRamp * speedSteerDamp;
+      state.steerAngleRad += netSteer * effectiveSteerRate * dt;
     } else if (options.autoCenterSteering) {
-      const speedFactor = Math.min(1, Math.abs(state.speedMs) / 4.0);
-      const centerRate = (0.65 + 2.4 * speedFactor) * dt;
+      const speedFactor = Math.min(1, absSpd / 4.0);
+      const centerRate = (0.55 + 1.85 * speedFactor) * dt;
       if (Math.abs(state.steerAngleRad) <= centerRate) {
         state.steerAngleRad = 0;
       } else {
@@ -135,7 +169,10 @@ export function stepVehiclePhysics(
       }
     }
   }
-  state.steerAngleRad = Math.max(-spec.maxSteerRad, Math.min(spec.maxSteerRad, state.steerAngleRad));
+  // At high speed, cap maximum front-wheel lock angle so car doesn't spin out on a key press, while allowing full 43° lock at low Crank/S-Curve speeds!
+  const speedMaxSteerCap =
+    absSpd <= 4.5 ? spec.maxSteerRad : spec.maxSteerRad / (1 + (absSpd - 4.5) * 0.12);
+  state.steerAngleRad = Math.max(-speedMaxSteerCap, Math.min(speedMaxSteerCap, state.steerAngleRad));
   state.steeringWheelRad = (state.steerAngleRad / spec.maxSteerRad) * spec.steeringWheelMaxRad;
 
   // 2. Blinker timer (1.5 Hz Japanese relay flash)
@@ -173,30 +210,37 @@ export function stepVehiclePhysics(
   const slopeAngle = Math.atan(slopeAlongHeading);
   const gravityAccel = -9.81 * Math.sin(slopeAngle);
 
-  // 5. Drivetrain force (AT vs MT)
+  // 5. Drivetrain force (AT vs MT) with progressive time-elapsed pedal depression ramp
+  // Light tap on W/Up = 35% gentle throttle; holding W/Up smoothly depresses pedal to 100% over 0.55s
+  const throttleTimeRamp = 0.35 + 0.65 * Math.min(1, (state.throttleHoldSec || 0) / 0.55);
+  const effectiveThrottle = input.throttle * throttleTimeRamp;
+  // Light tap on S/Down = 38% gentle pumping brake; holding S/Down builds to 100% full braking over 0.45s
+  const brakeTimeRamp = 0.38 + 0.62 * Math.min(1, (state.brakeHoldSec || 0) / 0.45);
+  const effectiveBrake = input.brake * brakeTimeRamp;
+
   let driveAccel = 0;
   const clutchEngaged = state.transmission === 'AT' ? 1 : 1 - Math.max(0, Math.min(1, input.clutch));
   const engineAlive = !state.stalled;
 
   if (state.transmission === 'AT') {
     if (state.gear === 'D') {
-      if (input.throttle > 0.02 && state.speedMs < spec.maxSpeedMs) {
-        driveAccel = input.throttle * spec.maxAccelMs2;
-      } else if (input.brake < 0.05 && !state.handbrake && state.speedMs < 1.65) {
+      if (effectiveThrottle > 0.02 && state.speedMs < spec.maxSpeedMs) {
+        driveAccel = effectiveThrottle * spec.maxAccelMs2;
+      } else if (effectiveBrake < 0.05 && !state.handbrake && state.speedMs < 1.65) {
         // Authentic AT Creep (クリープ現象)
         driveAccel = 1.25 * (1 - Math.max(0, state.speedMs) / 1.65);
       }
-      state.rpm = 820 + Math.abs(state.speedMs) * 210 + input.throttle * 1400;
+      state.rpm = 820 + Math.abs(state.speedMs) * 210 + effectiveThrottle * 1400;
     } else if (state.gear === 'R') {
-      if (input.throttle > 0.02 && state.speedMs > -spec.maxReverseMs) {
-        driveAccel = -input.throttle * (spec.maxAccelMs2 * 0.72);
-      } else if (input.brake < 0.05 && !state.handbrake && state.speedMs > -1.4) {
-        driveAccel = -0.82 * (1 - Math.max(0, -state.speedMs) / 1.4);
+      if (effectiveThrottle > 0.02 && state.speedMs > -spec.maxReverseMs) {
+        driveAccel = -effectiveThrottle * (spec.maxAccelMs2 * 0.65);
+      } else if (effectiveBrake < 0.05 && !state.handbrake && state.speedMs > -1.35) {
+        driveAccel = -0.82 * (1 - Math.max(0, -state.speedMs) / 1.35);
       }
-      state.rpm = 820 + Math.abs(state.speedMs) * 260 + input.throttle * 1200;
+      state.rpm = 820 + Math.abs(state.speedMs) * 260 + effectiveThrottle * 1200;
     } else {
       // P or N
-      state.rpm = 780 + input.throttle * 2600;
+      state.rpm = 780 + effectiveThrottle * 2600;
     }
   } else {
     // MT mode
@@ -207,7 +251,7 @@ export function stepVehiclePhysics(
       const dir = isRev ? -1 : 1;
 
       const wheelRpm = (Math.abs(state.speedMs) / maxGSpeed) * 3800;
-      const freeRpm = 800 + input.throttle * 3400;
+      const freeRpm = 800 + effectiveThrottle * 3400;
       state.rpm = wheelRpm * clutchEngaged + freeRpm * (1 - clutchEngaged);
 
       // Authentic MT stall check when clutch released at near-zero speed with insufficient throttle
@@ -222,19 +266,19 @@ export function stepVehiclePhysics(
       } else if (clutchEngaged > 0.15) {
         const directionalSpeed = state.speedMs * dir;
         if (directionalSpeed < maxGSpeed) {
-          const throttlePower = Math.max(0.18, input.throttle);
+          const throttlePower = Math.max(0.18, effectiveThrottle);
           driveAccel = dir * throttlePower * spec.maxAccelMs2 * torqueMul * clutchEngaged;
         }
       }
     } else {
-      state.rpm = engineAlive ? 780 + input.throttle * 2800 : 0;
+      state.rpm = engineAlive ? 780 + effectiveThrottle * 2800 : 0;
     }
   }
 
   // 6. Brakes, Park pawl, rolling resistance & hill hold
   const parkHold = state.transmission === 'AT' && state.gear === 'P';
   const handbrakeDecel = state.handbrake ? 6.8 : 0;
-  const footBrakeDecel = input.brake * spec.brakeDecelMs2;
+  const footBrakeDecel = effectiveBrake * spec.brakeDecelMs2;
   const totalBrakeDecel = footBrakeDecel + handbrakeDecel + (parkHold ? 14.0 : 0);
 
   state.braking = input.brake > 0.05;
