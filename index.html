@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#059669" />
+  <title>Japan Driving Test Course Simulator 3D | 日本の自動車教習所シミュレーター</title>
+  <script type="module" crossorigin src="./assets/index-Cx1FgL_e.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-D3vgRo3r.css">
+</head>
+<body>
+  <!-- Persistent Top Website Navigation Bar -->
+  <header id="topSiteNav" class="top-site-nav" aria-label="Primary website navigation">
+    <div class="tsn-brand" id="navLogoHomeBtn" role="button" tabindex="0">
+      <span class="tsn-badge">🔰</span>
+      <div class="tsn-brand-text">
+        <strong>GaimenGo Japan</strong>
+        <small id="navBrandSub">日本の自動車教習所・外免切替ポータル</small>
+      </div>
+    </div>
+
+    <nav class="tsn-links">
+      <button type="button" class="tsn-link active" data-site-nav="home" id="navBtnHome">
+        🏠 Home / ホーム
+      </button>
+      <button type="button" class="tsn-link" data-site-nav="practice" id="navBtnPractice">
+        🚗 Driving Practice / 自由練習
+      </button>
+      <button type="button" class="tsn-link" data-site-nav="exam" id="navBtnExam">
+        🎓 Practical Test (100pt) / 技能検定
+      </button>
+      <button type="button" class="tsn-link" data-site-nav="publicRoad" id="navBtnPublicRoad" style="border-color:rgba(251,191,36,0.5);color:#fde68a;">
+        🛣️ Stage 2 Public Road / 路上コース
+      </button>
+      <button type="button" class="tsn-link" data-site-nav="written" id="navBtnWritten">
+        📝 Written Test (50-Q) / 学科試験
+      </button>
+      <button type="button" class="tsn-link" data-site-nav="rules" id="navBtnRules">
+        📖 Rules, Signs &amp; PDF / 教本・標識
+      </button>
+      <button type="button" class="tsn-link" data-site-nav="route" id="navBtnRoute">
+        📍 Route Builder / ルート作成
+      </button>
+    </nav>
+
+    <div class="tsn-right">
+      <button id="navLangEnBtn" class="tsn-lang-btn" type="button">EN</button>
+      <button id="navLangJaBtn" class="tsn-lang-btn" type="button">日本語</button>
+    </div>
+  </header>
+
+  <!-- Home Landing Hub View (Default Landing Screen When Opening Website) -->
+  <main id="homeHubOverlay" class="home-hub-overlay">
+    <div class="hh-container">
+      <section class="hh-hero">
+        <div class="hh-pill" id="hhHeroPill">🇯🇵 Official Oct 2025 Format · 外免切替・仮免・本免 総合学習ポータル</div>
+        <h1 id="hhHeroTitle">Japan Driving School 3D Simulator &amp; Exam Portal</h1>
+        <p id="hhHeroLead">
+          Master the Japanese practical driving test (技能試験) and the 50-question written test (学科試験 90%合格基準) in one realistic 3D platform — complete with an Instructor Passenger-Seat camera, AI traffic &amp; pedestrians, custom route builder, and the 42-page study guide PDF.
+        </p>
+        <div class="hh-hero-ctas">
+          <button type="button" class="hh-btn-primary" data-home-action="practice" id="hhStartPracticeBtn">
+            🚗 Start 3D Driving Practice (3D自由練習を始める)
+          </button>
+          <button type="button" class="hh-btn-secondary" data-home-action="exam" id="hhStartExamBtn">
+            🎓 Start 100-Pt Practical Exam (技能検定試験を開始)
+          </button>
+          <button type="button" class="hh-btn-secondary" data-home-action="publicRoad" id="hhStartPublicRoadBtn" style="border-color:rgba(251,191,36,0.55);color:#fde68a;">
+            🛣️ Stage 2 Public Road Course (路上教習・自転車・駐停車テスト)
+          </button>
+          <button type="button" class="hh-btn-secondary" data-home-action="written" id="hhStartWrittenBtn">
+            📝 Take 50-Question Written Test (学科模擬試験50問)
+          </button>
+        </div>
+      </section>
+
+      <section class="hh-cards-grid">
+        <article class="hh-card" data-home-action="practice">
+          <div class="hh-card-icon">🚗</div>
+          <h3 id="hhCard1Title">3D Driving Practice (場内コース自由練習)</h3>
+          <p id="hhCard1Desc">
+            Practice S-Curve (S字), 90° Crank (クランク), Hill Start (坂道発進), Railroad Crossing (踏切), and Bay/Parallel Parking with RHD Sedan or 400cc Motorcycle.
+          </p>
+          <span class="hh-card-link" id="hhCard1Link">Open 3D Practice →</span>
+        </article>
+
+        <article class="hh-card" data-home-action="exam">
+          <div class="hh-card-icon">👨‍✈️</div>
+          <h3 id="hhCard2Title">100-Pt Practical Driving Test (技能検定・検定員視点)</h3>
+          <p id="hhCard2Desc">
+            Sit with the virtual examiner in Instructor View. Enforces the 8-step Pre-Drive Cockpit Sequence (Seat → Mirrors → Seatbelt), 2-second 止まれ stops, and instant red-freeze rule explanations.
+          </p>
+          <span class="hh-card-link" id="hhCard2Link">Start Practical Exam →</span>
+        </article>
+
+        <article class="hh-card" data-home-action="publicRoad" style="border-color:rgba(251,191,36,0.45);">
+          <div class="hh-card-icon">🛣️</div>
+          <h3 id="hhCardRoadTitle">Stage 2 Public Road Map (路上教習・本免卒業検定)</h3>
+          <p id="hhCardRoadDesc">
+            4-lane city boulevard with animated 3D cyclists in the left bike lane (1.2m clearance &amp; left-turn Makikomi check), parked delivery trucks with hazards, and red No-Parking / No-Stopping zones (5m Fire Hydrant, 10m Bus Stop) vs green Legal Pull-Over Bay.
+          </p>
+          <span class="hh-card-link" id="hhCardRoadLink" style="color:#fde68a;">Drive Stage 2 Public Road →</span>
+        </article>
+
+        <article class="hh-card" data-home-action="written">
+          <div class="hh-card-icon">📝</div>
+          <h3 id="hhCard3Title">50-Question Written Test (2025年新制度 学科試験)</h3>
+          <p id="hhCard3Desc">
+            Interactive True/False (○ / ×) mock exam matching the October 2025 Gaimen Kirikae standard (45/50 = 90% to pass) with instant trap explanations.
+          </p>
+          <span class="hh-card-link" id="hhCard3Link">Start Written Test →</span>
+        </article>
+
+        <article class="hh-card" data-home-action="rules">
+          <div class="hh-card-icon">📖</div>
+          <h3 id="hhCard4Title">Rules, Road Signs &amp; 42-Page PDF (教本・標識・PDF)</h3>
+          <p id="hhCard4Desc">
+            Study Driving Center Compound Rules (場内) vs Public Road Rules (路上), visual Japanese traffic signs encyclopedia, NPA deduction table, and download the 42-page Study Guide PDF.
+          </p>
+          <span class="hh-card-link" id="hhCard4Link">Open Rulebook &amp; PDF →</span>
+        </article>
+
+        <article class="hh-card" data-home-action="route">
+          <div class="hh-card-icon">📍</div>
+          <h3 id="hhCard5Title">Custom Route Builder &amp; Memory Trainer (コース図暗記)</h3>
+          <p id="hhCard5Desc">
+            Upload your local driving center’s route map image, auto-trace colored route lines, stamp 3D 止まれ signs, and practice in Guided, Blind Memory, or Auto-Drive modes.
+          </p>
+          <span class="hh-card-link" id="hhCard5Link">Build Custom Route →</span>
+        </article>
+
+        <article class="hh-card" data-home-action="pdf">
+          <div class="hh-card-icon">📕</div>
+          <h3 id="hhCard6Title">Bundled Study Guide PDF (外免切替 完全教本PDF)</h3>
+          <p id="hhCard6Desc">
+            Open or download the complete 42-page Gaimen Kirikae Written &amp; Practical Study Guide PDF directly in your browser.
+          </p>
+          <span class="hh-card-link" id="hhCard6Link">Open PDF Guide ↗</span>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <!-- Top-Left Collapsible Setup Card & Persistent Quick View Pills (GaimenGo layout) -->
+  <div id="ui" class="collapsed">
+    <div class="topBarRow">
+      <button id="uiToggle" type="button">Show Menu / メニュー</button>
+      <div id="collapsedQuickActions" aria-label="Quick view menu">
+        <button class="quickViewBtn is-active" data-view-target="chase" type="button">Chase</button>
+        <button class="quickViewBtn" data-view-target="cockpit" type="button">Cockpit</button>
+        <button class="quickViewBtn" data-view-target="instructor" type="button" style="border-color:rgba(251,191,36,0.55);color:#fde68a;">
+          👨‍✈️ Instructor / 検定員席
+        </button>
+        <button class="quickViewBtn" data-view-target="hood" type="button">Hood</button>
+        <button class="quickViewBtn" data-view-target="orbit" type="button">Free</button>
+        <button id="quickRulebookBtn" class="quickViewBtn" type="button" style="border-color:rgba(96,165,250,0.55);color:#bfdbfe;">
+          📖 Rules &amp; PDF / 教本・標識
+        </button>
+        <button id="quickRouteBuilderBtn" class="quickViewBtn" type="button" style="border-color:rgba(52,211,153,0.45);color:#a7f3d0;">
+          📍 Route Builder / ルート作成
+        </button>
+        <button id="quickResetBtn" class="quickViewBtn" type="button">Reset vehicle</button>
+        <button id="quickLangEnBtn" class="quickViewBtn" type="button">EN</button>
+        <button id="quickLangJaBtn" class="quickViewBtn" type="button">日本語</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panelScroll">
+        <div class="brandHeaderRow">
+          <h1 id="appBrandText" class="appBrand">GaimenGo Driving Simulator · 日本の自動車教習所</h1>
+          <div style="display:flex;gap:4px;">
+            <button id="panelLangEnBtn" class="subtleUtilityBtn" type="button">English</button>
+            <button id="panelLangJaBtn" class="subtleUtilityBtn" type="button">日本語</button>
+          </div>
+        </div>
+
+        <h2 class="setupTitle">
+          <span class="setupMascot" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="#34d399" stroke-width="2.2" />
+              <circle cx="12" cy="12" r="3" fill="#34d399" />
+              <path d="M12 15v6M5 10.5h14" stroke="#6ee7b7" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </span>
+          <span id="setupTitleText">Ready to drive / ドライブの準備</span>
+        </h2>
+        <p id="setupLeadText" class="setupLead">
+          Choose your vehicle and map, warp to any driving school obstacle, or start the 100-point exam.
+        </p>
+
+        <section class="controlsSection">
+          <div class="controlGrid two-col">
+            <label class="control-field">
+              <span id="lblVehicle">Vehicle / 車種</span>
+              <select id="vehicleType">
+                <option id="optSedan" value="sedan">Sedan (RHD Corolla)</option>
+                <option id="optMoto" value="motorcycle">Motorcycle (400cc)</option>
+              </select>
+            </label>
+            <label class="control-field">
+              <span id="lblTrans">Transmission / 変速機</span>
+              <select id="transmissionMode">
+                <option id="optAT" value="AT">AT (Automatic)</option>
+                <option id="optMT" value="MT">MT (Manual 5-Speed)</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="controlGrid">
+            <label class="control-field">
+              <span id="lblMap">Course / Map (コース選択)</span>
+              <select id="mapPreset"></select>
+            </label>
+          </div>
+
+          <div class="controlGrid two-col">
+            <button id="modePracticeBtn" type="button" class="action-btn">Free Practice (自由練習)</button>
+            <button id="modeExamBtn" type="button" class="action-btn" style="border-color:rgba(52,211,153,0.5);color:#a7f3d0;">
+              Mock Exam (修了検定)
+            </button>
+          </div>
+          <div class="controlGrid two-col">
+            <button id="openRulebookBtn" type="button" class="action-btn" style="border-color:rgba(96,165,250,0.5);color:#bfdbfe;">
+              📖 Rules, Signs &amp; PDF (教本・標識・減点基準)
+            </button>
+            <label class="toggle-card" style="margin:0;padding:8px 10px;">
+              <input id="strictRuleFreezeChk" type="checkbox" checked />
+              <span id="lblStrictFreeze">🚨 Red Freeze on Rule Break (違反時赤画面停止)</span>
+            </label>
+          </div>
+        </section>
+
+        <!-- Fold 0: Custom Route Builder & Memorization Trainer -->
+        <details class="settingsFold" open>
+          <summary id="foldRouteTrainerTitle">Route Memorization Trainer (コース図ルート作成・暗記)</summary>
+          <div class="settingsFoldBody">
+            <p id="routeTrainerDesc" style="margin:0;color:#acbfce;line-height:1.45;">
+              Upload your driving center’s route map image, auto-detect or trace the test route, add 3D Stop Signs &amp; Traffic Lights, and practice memorizing every turn!
+            </p>
+            <button id="openRouteBuilderBtn" type="button" class="startDriving" style="padding:10px 14px;border-radius:10px;">
+              📍 Open Route Builder / コース図からルート作成
+            </button>
+            <div class="memory-mode-pills" role="group" aria-label="Route memorization mode">
+              <button class="memory-pill active" data-memory-mode="guided" type="button" id="memModeGuidedBtn">
+                📍 Guided (ガイド表示)
+              </button>
+              <button class="memory-pill" data-memory-mode="blind" type="button" id="memModeBlindBtn">
+                🧠 Memory Test (暗記・非表示)
+              </button>
+              <button class="memory-pill" data-memory-mode="autodrive" type="button" id="memModeAutoBtn">
+                🤖 Auto-Drive (お手本自動走行)
+              </button>
+            </div>
+          </div>
+        </details>
+
+        <!-- Fold 1: Kyoshujo Station Quick-Warp -->
+        <details class="settingsFold" open>
+          <summary id="foldStationsTitle">Kyōshūjo Training Stations (課題ワープ)</summary>
+          <div class="settingsFoldBody">
+            <div id="stationGrid" class="station-chip-grid"></div>
+          </div>
+        </details>
+
+        <!-- Fold 2: Handling & Sound + Live Acceleration Curve SVG -->
+        <details class="settingsFold">
+          <summary id="foldTuningTitle">Handling &amp; sound (操作感とサウンド)</summary>
+          <div class="settingsFoldBody">
+            <div class="range-card control-range">
+              <span id="lblMaxSpeed">Max Speed</span>
+              <input id="maxSpeed" type="range" min="4" max="35" step="1" value="17" />
+              <span id="maxSpeedValue" class="control-value">17 m/s</span>
+            </div>
+
+            <div class="range-card control-range">
+              <span id="lblVolume">Volume</span>
+              <input id="masterVolume" type="range" min="0" max="100" step="1" value="55" />
+              <span id="masterVolumeValue" class="control-value">55%</span>
+            </div>
+
+            <div class="range-card control-range">
+              <span id="lblSteerSens">Steering Sensitivity</span>
+              <input id="steeringSensitivity" type="range" min="50" max="200" step="1" value="100" />
+              <span id="steeringSensitivityValue" class="control-value">1.00x</span>
+            </div>
+
+            <label class="toggle-card">
+              <input id="autoCenterSteering" type="checkbox" checked />
+              <span id="lblAutoCenter">Auto-center Steering</span>
+            </label>
+
+            <label class="control-field">
+              <span id="lblMirrorQuality">Graphics &amp; Mirrors</span>
+              <select id="renderQuality">
+                <option id="optMirrorHigh" value="high">High · Real-time 3 Mirrors</option>
+                <option id="optMirrorLow" value="low">Medium · Balanced</option>
+                <option id="optMirrorOff" value="off">Low · Save power</option>
+              </select>
+            </label>
+
+            <label class="toggle-card">
+              <input id="settingTouchControls" type="checkbox" />
+              <span id="lblTouchControls">Show mobile touch controls</span>
+            </label>
+
+            <!-- GaimenGo Live Acceleration Curve SVG Card -->
+            <div class="curveCard" aria-label="Acceleration curve chart">
+              <div class="curveCardHeader">
+                <div class="curveCardTitle">
+                  <strong id="curveTitle">Acceleration Curve</strong>
+                  <span id="curveDesc">X axis is throttle input, Y axis is drive output</span>
+                </div>
+                <span id="accelCurveValue" class="curveValue">1.35</span>
+              </div>
+              <div class="curveSliderRow">
+                <span id="curveSoftLbl" class="curveSliderLabel">Soft</span>
+                <input id="accelCurve" type="range" min="80" max="180" step="1" value="135" />
+                <span id="curveDirectLbl" class="curveSliderLabel">Direct</span>
+              </div>
+              <svg id="accelCurveChart" class="curveChart" viewBox="0 0 220 136" role="img">
+                <rect class="curveChartFrame" x="16" y="10" width="188" height="104" rx="14" />
+                <path
+                  class="curveChartGrid"
+                  d="M32 108H188 M32 86H188 M32 64H188 M32 42H188 M32 20V108 M71 20V108 M110 20V108 M149 20V108 M188 20V108"
+                />
+                <path class="curveChartAxis" d="M32 108H188 M32 108V20" />
+                <polyline id="accelCurveLine" class="curveChartLine" points="32,108 188,20" />
+                <line id="accelCurveGuideX" class="curveChartGuide" x1="32" y1="108" x2="32" y2="108" />
+                <line id="accelCurveGuideY" class="curveChartGuide" x1="32" y1="108" x2="32" y2="108" />
+                <circle id="accelCurveDot" class="curveChartDot" cx="32" cy="108" r="4.8" />
+                <text x="32" y="124" text-anchor="middle">0%</text>
+                <text x="110" y="124" text-anchor="middle">50%</text>
+                <text x="188" y="124" text-anchor="middle">100%</text>
+                <text x="24" y="111" text-anchor="end">0</text>
+                <text x="24" y="67" text-anchor="end">50</text>
+                <text x="24" y="24" text-anchor="end">100</text>
+              </svg>
+              <div class="curveMeta">
+                <span><span id="curveInputLbl">Current Input</span> <strong id="accelCurveInputValue">0%</strong></span>
+                <span><span id="curveOutputLbl">Current Output</span> <strong id="accelCurveOutputValue">0%</strong></span>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Fold 3: Map Editor & Spawn -->
+        <details class="settingsFold">
+          <summary id="foldMapTitle">Map editor &amp; spawn (マップ編集・開始位置)</summary>
+          <div class="settingsFoldBody">
+            <div class="controlGrid two-col">
+              <label class="file-label action-btn">
+                <span id="uploadMapText">Upload Map</span>
+                <input id="mapInput" type="file" accept="image/*" />
+              </label>
+              <button id="setSpawnBtn" type="button" class="action-btn">Set Spawn</button>
+              <button id="viewBtn" type="button" class="action-btn">Change View</button>
+              <button id="copyMapJsonBtn" type="button" class="action-btn">Copy JSON</button>
+            </div>
+            <div class="controlGrid">
+              <label class="control-field">
+                <span id="lblCustomWidth">Map Width (m)</span>
+                <input id="mapWidth" type="number" min="40" max="1500" step="1" value="180" />
+              </label>
+              <div class="range-card control-range">
+                <span id="lblMapScale">Map Scale</span>
+                <input id="mapScale" type="range" min="40" max="1500" step="1" value="180" />
+                <span id="mapScaleValue" class="control-value">180 m</span>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Fold 4: How to drive -->
+        <details class="settingsFold">
+          <summary id="foldHelpTitle">How to drive (操作ガイド)</summary>
+          <div class="settingsFoldBody">
+            <div id="tipsContainer" class="tips"></div>
+            <p id="helpMiniMapText" style="margin:4px 0 0;color:#93a8b6;"></p>
+          </div>
+        </details>
+
+        <!-- Fold 5: Driving Details -->
+        <details class="settingsFold">
+          <summary id="foldDataTitle">Driving details (走行データ)</summary>
+          <div class="settingsFoldBody">
+            <div class="telemetryList">
+              <div><span id="lblTelView">View:</span> <strong id="viewMode">Chase View</strong></div>
+              <div><span id="lblTelPos">Position:</span> <strong id="position">0.0, 0.0</strong></div>
+              <div><span id="lblTelHead">Heading:</span> <strong id="heading">0.0° / 0.0000 rad</strong></div>
+              <div><span id="lblTelSteer">Steering:</span> <strong id="steerAngle">0</strong>°</div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Fold 6: Built-in Japanese Test Center Courses -->
+        <details class="settingsFold">
+          <summary id="foldCoursesTitle">Built-in Test Center Courses (試験場コース一覧)</summary>
+          <div class="settingsFoldBody">
+            <ul id="courseQuickList" class="courseList"></ul>
+          </div>
+        </details>
+      </div>
+
+      <div class="driveActions">
+        <button id="startDrivingBtn" type="button" class="startDriving">Start driving / 運転を始める</button>
+        <button id="resetBtn" type="button" class="action-btn">Reset Vehicle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three Live PiP Mirror Panes (Chase top-center, Cockpit windshield layout) -->
+  <div id="mirrorHud" aria-hidden="true">
+    <div class="mirrorPane" id="mirrorLeft">
+      <span class="mirrorLabel" id="lblMirrorL">Left Mirror</span>
+    </div>
+    <div class="mirrorPane mirrorCenter" id="mirrorCenter">
+      <span class="mirrorLabel" id="lblMirrorC">Center Mirror</span>
+    </div>
+    <div class="mirrorPane" id="mirrorRight">
+      <span class="mirrorLabel" id="lblMirrorR">Right Mirror</span>
+    </div>
+  </div>
+
+  <!-- Cockpit Turn Signal Lamps -->
+  <div id="cockpitSignalHud" aria-hidden="true">
+    <div class="cockpitSignalLamp" id="cockpitLampLeft" data-direction="left">← Left</div>
+    <div class="cockpitSignalLamp" id="cockpitLampRight" data-direction="right">Right →</div>
+  </div>
+
+  <!-- Interactive 8-Step Pre-Drive Cockpit Checklist Bar (乗車〜発進の正しい順序チェック) -->
+  <div id="preDriveBar" class="pre-drive-bar" aria-label="Pre-drive cockpit checklist">
+    <div class="pd-header">
+      <strong id="pdTitleText">👨‍✈️ 乗車〜発進手順 (Pre-Drive Order — Click or Press 1–8 in sequence)</strong>
+      <div class="pd-header-actions">
+        <button id="pdAutoCompleteBtn" type="button" class="pd-mini-btn">⚡ Auto-Complete (一括完了)</button>
+        <button id="pdCollapseBtn" type="button" class="pd-mini-btn" aria-label="Minimize checklist">−</button>
+      </div>
+    </div>
+    <div id="pdStepsRow" class="pd-steps-row">
+      <button type="button" class="pd-step-chip" data-pd-step="1">
+        <span class="pd-num">1</span>
+        <span class="pd-lbl" id="pdStep1Lbl">Door Lock<br/><small>ドアロック</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="2">
+        <span class="pd-num">2</span>
+        <span class="pd-lbl" id="pdStep2Lbl">Seat Adjust<br/><small>座席調整</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="3">
+        <span class="pd-num">3</span>
+        <span class="pd-lbl" id="pdStep3Lbl">Mirrors<br/><small>ミラー確認</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="4">
+        <span class="pd-num">4</span>
+        <span class="pd-lbl" id="pdStep4Lbl">Seatbelt<br/><small>ベルト着用</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="5">
+        <span class="pd-num">5</span>
+        <span class="pd-lbl" id="pdStep5Lbl">Brake+Start<br/><small>エンジン始動</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="6">
+        <span class="pd-num">6</span>
+        <span class="pd-lbl" id="pdStep6Lbl">Gear D+Side<br/><small>D・サイド解除</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="7">
+        <span class="pd-num">7</span>
+        <span class="pd-lbl" id="pdStep7Lbl">Right Signal<br/><small>右合図 (E)</small></span>
+      </button>
+      <button type="button" class="pd-step-chip" data-pd-step="8">
+        <span class="pd-num">8</span>
+        <span class="pd-lbl" id="pdStep8Lbl">5-Pt Look<br/><small>右後方目視 (X)</small></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MT Stall Warning -->
+  <div id="stallBanner" class="stall-banner" hidden>
+    <span id="stallText">Engine Stalled! Press [I] to restart</span>
+    <button id="stallRestartBtn" type="button">Start Engine (I)</button>
+  </div>
+
+  <!-- Reset Toast -->
+  <div id="resetToast" class="resetToast" role="status">
+    <span id="resetToastText">Back to the start — try again!</span>
+  </div>
+
+  <!-- Bottom-Left Telemetry Status & Center Floating Wheel HUD -->
+  <div id="hud">
+    <div id="violationToasts" class="violation-toasts"></div>
+    <div class="status">
+      <div class="speedCard"><span id="speed">0.0</span> <span>km/h</span></div>
+      <div class="gearCard" id="gearCardBtn" title="Click or press Shift/Ctrl to change gear">
+        <span id="gear">D</span>
+      </div>
+      <div class="scoreCard">
+        <span id="hudScore" class="score-num">100</span>
+        <span>PTS</span>
+        <span id="hudModePill" style="color:#93c5fd;font-weight:700;">自由練習</span>
+      </div>
+      <div id="signalStatusBox" data-signal="off">
+        <span id="lblHudSignal">Signal:</span> <span id="signalStatus">Off</span>
+      </div>
+      <div class="wheelMiniGrid" title="4-Wheel Curb Proximity">
+        <div id="wheelFL" class="wheel-pip"></div>
+        <div id="wheelFR" class="wheel-pip"></div>
+        <div id="wheelRL" class="wheel-pip"></div>
+        <div id="wheelRR" class="wheel-pip"></div>
+      </div>
+      <div class="directiveCard" id="hudDirective"></div>
+    </div>
+  </div>
+
+  <!-- Translucent 3-Spoke Wheel HUD -->
+  <div id="wheelHud" aria-hidden="true">
+    <div class="wheelHudTopMark"></div>
+    <div id="wheelHudDial">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="44" stroke="#d4dfe8" stroke-width="7" stroke-opacity="0.9" />
+        <line x1="50" y1="41" x2="50" y2="9.5" stroke="#c8d5e0" stroke-width="7" stroke-linecap="round" stroke-opacity="0.88" />
+        <line x1="57.8" y1="54.5" x2="85.1" y2="70.3" stroke="#c8d5e0" stroke-width="7" stroke-linecap="round" stroke-opacity="0.88" />
+        <line x1="42.2" y1="54.5" x2="14.9" y2="70.3" stroke="#c8d5e0" stroke-width="7" stroke-linecap="round" stroke-opacity="0.88" />
+        <circle cx="50" cy="50" r="11" fill="#059669" stroke="#34d399" stroke-width="2" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- Bottom-Right Expandable 3D Mini Map -->
+  <div id="miniMap" role="button" tabindex="0" aria-label="Click to expand mini map">
+    <span class="miniMapLabel" id="lblMiniMap">Mini Map</span>
+    <span class="miniMapHint" id="lblMiniMapHint">
+      Hold and drag to pan. Wheel to zoom. Click any point on the course to teleport there.
+    </span>
+    <button id="miniMapClose" type="button" aria-label="Close mini map">×</button>
+  </div>
+
+  <!-- First-Run Bottom Hint -->
+  <div id="firstRunHint" class="firstRunHint" aria-live="polite">
+    <button id="firstRunHintClose" type="button" aria-label="Close tips">×</button>
+    <strong id="firstRunTitle">Start driving</strong>
+    <span id="firstRunText">
+      WASD or arrow keys drive, Q/E signals, Space brakes, Z/X look left &amp; right, V changes view, O resets.
+    </span>
+  </div>
+
+  <!-- Mobile Controls -->
+  <div id="mobileControls" hidden aria-label="Mobile driving controls">
+    <div class="mobileCluster">
+      <div class="mobileSteerZone" id="mobileSteerZone" data-touch="steer">
+        <div class="mobileSteerIndicator" id="mobileSteerIndicator" data-touch="steer-knob"></div>
+        <span id="lblMobileSteerHint" class="mobileSteerHint">← Swipe to steer →</span>
+      </div>
+    </div>
+
+    <div class="mobileCluster">
+      <div id="signalLever" class="mobileSignalLever">
+        <span id="lblMobileSigL" class="signalLeverLabel" data-touch-action="blinker-left">↑ Left</span>
+        <div class="signalLeverKnob"></div>
+        <span id="lblMobileSigR" class="signalLeverLabel" data-touch-action="blinker-right">Right ↓</span>
+      </div>
+      <div class="mobileDriveStack">
+        <button id="lblMobileGear" class="mobileControl mobileReverse" data-touch-action="gear-down" type="button">Gear</button>
+        <button id="lblMobileBrake" class="mobileControl mobileBrake" data-touch="brake" type="button">Brake</button>
+        <button id="lblMobileThrottle" class="mobileControl mobileThrottle" data-touch="throttle" type="button">Throttle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exam Completion Score Sheet Modal -->
+  <div id="examResultModal" class="modal-backdrop" hidden>
+    <div class="modal-card">
+      <div class="exam-top-row">
+        <div>
+          <h2 id="examResultTitle" style="margin:0 0 4px;">Practical Driving Exam Score Sheet</h2>
+          <p id="examResultSub" style="margin:0;font-size:13px;color:#94a3b8;"></p>
+        </div>
+        <div id="examStamp" class="exam-stamp pass">合格</div>
+      </div>
+      <div class="exam-stats">
+        <div class="stat-cell">
+          <span id="examScoreLabelText">Final Score</span>
+          <strong id="examFinalScore">100 / 100</strong>
+        </div>
+        <div class="stat-cell">
+          <span id="examElapsedLabelText">Time</span>
+          <strong id="examElapsed">0:00</strong>
+        </div>
+        <div class="stat-cell">
+          <span id="examDistanceLabelText">Distance</span>
+          <strong id="examDistance">0 m</strong>
+        </div>
+      </div>
+      <ul id="examViolationList" class="exam-violations"></ul>
+      <div class="modal-actions">
+        <button id="examCloseBtn" class="action-btn" type="button">Continue Practice</button>
+        <button id="examPracticeWeakBtn" class="action-btn" type="button">Practice Weak Area</button>
+        <button id="examRetryBtn" class="startDriving" style="padding:10px 18px;border-radius:10px;" type="button">
+          Retry Exam
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Route Builder & Memorization Trainer Modal -->
+  <div id="routeBuilderModal" class="modal-backdrop" hidden>
+    <div class="route-builder-card">
+      <div class="exam-top-row" style="margin-bottom:4px;">
+        <div>
+          <h2 id="rbTitle" style="margin:0 0 4px;font-size:18px;">
+            Driving Center Route Builder &amp; Memorization Trainer (コース図ルート作成・暗記)
+          </h2>
+          <p id="rbSubtitle" style="margin:0;font-size:12.5px;color:#94a3b8;">
+            1. Upload your driving center route map image (or use current course) → 2. Auto-detect colored route line or click along the road to add numbered waypoints &amp; 3D Stop Signs → 3. Click "Save &amp; Drive Route" to practice!
+          </p>
+        </div>
+        <button id="rbCloseBtn" class="action-btn" type="button">✕</button>
+      </div>
+
+      <div class="rb-toolbar">
+        <div class="rb-tool-group">
+          <label class="file-label rb-tool-btn" style="background:rgba(52,211,153,0.18);border-color:#34d399;color:#a7f3d0;">
+            <span id="rbUploadLbl">📷 Upload Route Image (コース図画像を読込)</span>
+            <input id="rbUploadInput" type="file" accept="image/*" />
+          </label>
+          <button class="rb-tool-btn active" data-rb-tool="waypoint" type="button" id="rbToolWpBtn">
+            📍 + Route Point (ルート点)
+          </button>
+          <button class="rb-tool-btn" data-rb-tool="stopSign" type="button" id="rbToolStopBtn">
+            🛑 + 3D Stop Sign (止まれ)
+          </button>
+          <button class="rb-tool-btn" data-rb-tool="trafficLight" type="button" id="rbToolLightBtn">
+            🚦 + 3D Signal (信号機)
+          </button>
+          <button class="rb-tool-btn" data-rb-tool="pole" type="button" id="rbToolPoleBtn">
+            🚩 + 3D Pole (ポール)
+          </button>
+        </div>
+        <div class="rb-tool-group">
+          <button id="rbUndoBtn" class="rb-tool-btn" type="button">↶ Undo (戻す)</button>
+          <button id="rbClearBtn" class="rb-tool-btn" type="button">🗑️ Clear (全消去)</button>
+        </div>
+      </div>
+
+      <div class="rb-auto-row">
+        <span id="rbAutoExtractLbl" style="font-weight:600;color:#cfe6f7;">
+          ✨ Auto-Detect Colored Route Line from Uploaded Map (画像の色線から自動ルート抽出):
+        </span>
+        <button class="color-chip-btn" data-trace-color="red" type="button" style="background:#991b1b;color:#fff;">
+          Red Line (赤線)
+        </button>
+        <button class="color-chip-btn" data-trace-color="blue" type="button" style="background:#1d4ed8;color:#fff;">
+          Blue Line (青線)
+        </button>
+        <button class="color-chip-btn" data-trace-color="green" type="button" style="background:#047857;color:#fff;">
+          Green Line (緑線)
+        </button>
+        <button class="color-chip-btn" data-trace-color="orange" type="button" style="background:#b45309;color:#fff;">
+          Orange Line (橙線)
+        </button>
+        <span id="rbStatusText" style="margin-left:auto;color:#6ee7b7;font-weight:600;"></span>
+      </div>
+
+      <div class="rb-canvas-wrap">
+        <canvas id="routeBuilderCanvas" width="900" height="600"></canvas>
+      </div>
+
+      <div class="modal-actions" style="justify-content:space-between;align-items:center;">
+        <div class="memory-mode-pills" style="min-width:340px;">
+          <button class="memory-pill active" data-memory-mode="guided" type="button">
+            📍 Guided (ガイド表示)
+          </button>
+          <button class="memory-pill" data-memory-mode="blind" type="button">
+            🧠 Memory Test (暗記テスト)
+          </button>
+          <button class="memory-pill" data-memory-mode="autodrive" type="button">
+            🤖 Auto-Drive (自動お手本)
+          </button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button id="rbSaveAndDriveBtn" class="startDriving" style="padding:11px 20px;border-radius:11px;" type="button">
+            ✅ Save &amp; Drive Route (このルートで練習開始)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Red Freeze Screen on Any Japanese Rule Violation (補助ブレーキ・違反エラー緊急停止画面) -->
+  <div id="violationFreezeOverlay" class="violation-freeze-overlay" hidden role="alertdialog" aria-modal="true">
+    <div class="vf-card">
+      <div class="vf-banner">
+        <span class="vf-siren">🚨</span>
+        <div>
+          <div class="vf-tag" id="vfTagText">RULE VIOLATION · 検定基準違反</div>
+          <h2 id="vfTitleText" class="vf-title">指定場所一時不停止 (Stop Sign Violation)</h2>
+        </div>
+        <div id="vfBadgeText" class="vf-badge fail">検定中止 / FAIL</div>
+      </div>
+
+      <div class="vf-body">
+        <div class="vf-box vf-what">
+          <strong id="vfWhatHeading">❌ Rule Broken (違反内容):</strong>
+          <p id="vfDetailJa" class="vf-ja-text"></p>
+          <p id="vfDetailEn" class="vf-en-text"></p>
+        </div>
+
+        <div class="vf-box vf-law">
+          <strong id="vfLawHeading">⚖️ Japanese Standard (日本の基準・減点):</strong>
+          <p id="vfRuleRefJa" class="vf-ja-text"></p>
+          <p id="vfRuleRefEn" class="vf-en-text"></p>
+        </div>
+
+        <div class="vf-box vf-fix">
+          <strong id="vfFixHeading">✅ Correct Action (正しい運転方法):</strong>
+          <p id="vfHowToFixJa" class="vf-ja-text"></p>
+          <p id="vfHowToFixEn" class="vf-en-text"></p>
+        </div>
+      </div>
+
+      <div class="vf-footer">
+        <span id="vfScoreRemainText" class="vf-score-remain">Score: 75 / 100</span>
+        <div class="vf-actions">
+          <button id="vfOpenRulebookBtn" type="button" class="action-btn">📖 Details / PDF</button>
+          <button id="vfRetryStationBtn" type="button" class="action-btn">🔄 Retry Station (最初から)</button>
+          <button id="vfResumeBtn" type="button" class="vf-resume-btn">
+            ✅ I Understand Rule — Unstuck Car &amp; Resume [Space / Enter] (理解して車を安全な位置に戻し再開)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comprehensive Bilingual Rulebook, Road Signs & Embedded PDF Study Guide Modal -->
+  <div id="rulebookModal" class="modal-backdrop" hidden>
+    <div class="rulebook-modal-card">
+      <div class="exam-top-row" style="margin-bottom:8px;">
+        <div>
+          <h2 id="rbModalTitle" style="margin:0 0 3px;font-size:19px;">
+            📖 Japanese Driving School &amp; Gaimen Kirikae Official Rulebook (日本の自動車教習所・外免切替 完全教本)
+          </h2>
+          <p id="rbModalSub" style="margin:0;font-size:12.5px;color:#94a3b8;">
+            Complete Pre-Drive Cockpit Sequence, Driving Center Compound Rules (場内) vs Public Road Rules (路上), Road Signs Encyclopedia &amp; Bundled 42-Page Study Guide PDF.
+          </p>
+        </div>
+        <button id="rulebookCloseBtn" class="action-btn" type="button">✕</button>
+      </div>
+
+      <div class="rb-tabs-row" role="tablist">
+        <button type="button" class="rb-tab-btn active" data-rb-tab="predrive" id="rbTabPredrive">
+          1. 👨‍✈️ Pre-Drive Order (乗車〜発進手順)
+        </button>
+        <button type="button" class="rb-tab-btn" data-rb-tab="compound" id="rbTabCompound">
+          2. 🏫 Driving Center Course (場内コース規則)
+        </button>
+        <button type="button" class="rb-tab-btn" data-rb-tab="road" id="rbTabRoad">
+          3. 🛣️ Public Road Rules (路上・道路交通法)
+        </button>
+        <button type="button" class="rb-tab-btn" data-rb-tab="signs" id="rbTabSigns">
+          4. 🪧 Traffic Signs (道路標識図鑑)
+        </button>
+        <button type="button" class="rb-tab-btn" data-rb-tab="written" id="rbTabWritten">
+          5. 📕 Deductions &amp; Study PDF (減点表・教本PDF)
+        </button>
+        <button type="button" class="rb-tab-btn" data-rb-tab="mock50" id="rbTabMock50" style="border-color:rgba(52,211,153,0.55);color:#a7f3d0;">
+          6. 📝 50-Q Written Exam (学科試験50問)
+        </button>
+      </div>
+
+      <div id="rulebookContentBody" class="rulebook-content-body"></div>
+    </div>
+  </div>
+
+  <div id="speedVignette" aria-hidden="true"></div>
+  <div id="speedBlur" aria-hidden="true"></div>
+  <canvas id="simCanvas"></canvas>
+</body>
+</html>
