@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#059669" />
   <title>Japan Driving Test Course Simulator 3D | 日本の自動車教習所シミュレーター</title>
-  <script type="module" crossorigin src="./assets/index-DvnfDyqx.js"></script>
+  <script type="module" crossorigin src="./assets/index-CfF6qkBp.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/index-CCUFeGJQ.css">
 </head>
 <body>
@@ -558,7 +558,7 @@
       <div class="vf-banner">
         <span class="vf-siren">🚨</span>
         <div>
-          <div class="vf-tag" id="vfTagText">JAPANESE DRIVING TEST STANDARD VIOLATION · 検定基準違反・補助ブレーキ作動</div>
+          <div class="vf-tag" id="vfTagText">RULE VIOLATION · 検定基準違反</div>
           <h2 id="vfTitleText" class="vf-title">指定場所一時不停止 (Stop Sign Violation)</h2>
         </div>
         <div id="vfBadgeText" class="vf-badge fail">検定中止 / FAIL</div>
@@ -566,61 +566,32 @@
 
       <div class="vf-body">
         <div class="vf-box vf-what">
-          <strong id="vfWhatHeading">❌ What Rule You Broke (違反内容):</strong>
+          <strong id="vfWhatHeading">❌ Rule Broken (違反内容):</strong>
           <p id="vfDetailJa" class="vf-ja-text"></p>
           <p id="vfDetailEn" class="vf-en-text"></p>
         </div>
 
         <div class="vf-box vf-law">
-          <strong id="vfLawHeading">⚖️ Japanese Road Traffic Act &amp; NPA Standard (根拠法令・技能試験実施基準):</strong>
+          <strong id="vfLawHeading">⚖️ Japanese Standard (日本の基準・減点):</strong>
           <p id="vfRuleRefJa" class="vf-ja-text"></p>
           <p id="vfRuleRefEn" class="vf-en-text"></p>
         </div>
 
         <div class="vf-box vf-fix">
-          <strong id="vfFixHeading">✅ How to Pass According to Japanese Standard (正しい運転操作・合格のポイント):</strong>
+          <strong id="vfFixHeading">✅ Correct Action (正しい運転方法):</strong>
           <p id="vfHowToFixJa" class="vf-ja-text"></p>
           <p id="vfHowToFixEn" class="vf-en-text"></p>
-        </div>
-
-        <!-- Step 1: Bundled Textbook / PDF Study Excerpt Card -->
-        <div class="vf-box vf-study-excerpt">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
-            <strong id="vfChapterHeading" style="margin:0;color:#93c5fd;">📖 Study Guide Textbook Excerpt (教本・道路交通法の重要ポイント):</strong>
-            <a href="./docs/Gaimen_Kirikae_Study_Guide.pdf" target="_blank" rel="noopener" class="vf-pdf-link">
-              📕 Open 42-Page Study Guide PDF (教本PDFを開く) ↗
-            </a>
-          </div>
-          <div id="vfChapterRefText" class="vf-chapter-ref"></div>
-          <ul id="vfStudyPointsList" class="vf-study-points"></ul>
-        </div>
-
-        <!-- Step 2: Mandatory Rule Comprehension Quiz + Confirmation Gate -->
-        <div class="vf-box vf-quiz-gate">
-          <strong id="vfQuizHeading">🧠 Step 1: Rule Comprehension Check — Select the Correct Rule to Unlock (ルール理解確認クイズ):</strong>
-          <p id="vfQuizQuestionJa" class="vf-ja-text" style="margin-top:4px;"></p>
-          <p id="vfQuizQuestionEn" class="vf-en-text" style="margin-bottom:8px;"></p>
-          <div class="vf-quiz-options">
-            <button id="vfQuizOpt0" type="button" class="vf-quiz-opt-btn"></button>
-            <button id="vfQuizOpt1" type="button" class="vf-quiz-opt-btn"></button>
-          </div>
-          <div id="vfQuizFeedback" class="vf-quiz-feedback" hidden></div>
-
-          <label class="vf-confirm-row" id="vfConfirmRow">
-            <input id="vfUnderstoodChk" type="checkbox" />
-            <span id="vfUnderstoodLbl">
-              <strong>Step 2:</strong> I have studied this Japanese traffic rule and confirm I understand how to perform it properly (上記のルール・法令を学習し、正しい運転操作を理解しました)
-            </span>
-          </label>
         </div>
       </div>
 
       <div class="vf-footer">
-        <span id="vfScoreRemainText" class="vf-score-remain">Current Score: 75 / 100</span>
+        <span id="vfScoreRemainText" class="vf-score-remain">Score: 75 / 100</span>
         <div class="vf-actions">
-          <button id="vfOpenRulebookBtn" type="button" class="action-btn">📖 Full Rulebook (教本一覧)</button>
-          <button id="vfRetryStationBtn" type="button" class="action-btn" disabled>🔒 Study &amp; Confirm Above to Retry (学習確認後にやり直し可)</button>
-          <button id="vfResumeBtn" type="button" class="vf-resume-btn" disabled>🔒 Study &amp; Confirm Rule Above to Unfreeze (学習・理解確認でロック解除)</button>
+          <button id="vfOpenRulebookBtn" type="button" class="action-btn">📖 Details / PDF</button>
+          <button id="vfRetryStationBtn" type="button" class="action-btn">🔄 Retry Station (最初から)</button>
+          <button id="vfResumeBtn" type="button" class="vf-resume-btn">
+            ✅ I Understand Rule — Unstuck Car &amp; Resume [Space / Enter] (理解して車を安全な位置に戻し再開)
+          </button>
         </div>
       </div>
     </div>

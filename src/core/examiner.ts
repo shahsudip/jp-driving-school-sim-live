@@ -103,7 +103,7 @@ export const VIOLATION_RULE_EXPLANATIONS: Record<ViolationCode, RuleExplanationM
     howToFixEn: 'Click steps 1 → 2 (Seat) → 3 (Mirrors) → 4 (Seatbelt) in order before pulling out.',
   },
   NO_SEATBELT: {
-    ruleRefJa: 'シートベルト未着用（道交法第71条の3）：ベルト未装着での発進（-10点）',
+    ruleRefJa: 'シートベルト未着用（道路交通法第71条の3）：ベルト未装着での発進（-10点）',
     ruleRefEn: 'No Seatbelt (ベルト未着用): Pulled out without fastening seatbelt (-10 pts).',
     howToFixJa: '発進前に手順④（またはキー4）でシートベルトを着用してください。',
     howToFixEn: 'Click Step 4 (or press key 4) to fasten your 3D seatbelt before driving.',

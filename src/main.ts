@@ -49,6 +49,7 @@ import {
   type TransmissionMode,
   type UserSettings,
   type VehicleKind,
+  type VehicleState,
   type ViolationEvent,
 } from './types';
 
