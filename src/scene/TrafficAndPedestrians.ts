@@ -1,19 +1,32 @@
 import * as THREE from 'three';
 import { distance } from '../core/coordinates';
+import { STOP_LINE_ZONES } from '../core/courseLayout';
 import type { TrafficSignalController } from '../core/trafficSignals';
-import type { VehicleState } from '../types';
+import type { BlinkerState, VehicleState } from '../types';
+
+interface AiWaypoint {
+  x: number;
+  z: number;
+  signal?: BlinkerState;
+}
 
 interface AiCarAgent {
   group: THREE.Group;
   wheels: THREE.Mesh[];
   brakeLamps: THREE.MeshStandardMaterial[];
-  waypoints: { x: number; z: number }[];
+  signalLeftLamps: THREE.MeshStandardMaterial[];
+  signalRightLamps: THREE.MeshStandardMaterial[];
+  waypoints: AiWaypoint[];
   wpIndex: number;
   x: number;
   z: number;
   heading: number;
   speedMs: number;
   maxSpeedMs: number;
+  blinker: BlinkerState;
+  blinkerTimer: number;
+  stopHoldTimer: number;
+  lastStoppedZoneId: string;
 }
 
 interface PedestrianAgent {
@@ -43,6 +56,29 @@ export interface TrafficSafetyReport {
   trafficCollision: boolean;
 }
 
+function sampleCornerArc(
+  cx: number,
+  cz: number,
+  radius: number,
+  startTheta: number,
+  endTheta: number,
+  steps: number,
+  signal: BlinkerState = 'off'
+): AiWaypoint[] {
+  const pts: AiWaypoint[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const th = startTheta + (endTheta - startTheta) * t;
+    // Note: in XZ plane with RingGeometry rotated x = -PI/2, world X = cx + R*cos(th), world Z = cz - R*sin(th)
+    pts.push({
+      x: cx + radius * Math.cos(th),
+      z: cz - radius * Math.sin(th),
+      signal: i < steps ? signal : 'off',
+    });
+  }
+  return pts;
+}
+
 export class TrafficAndPedestrians {
   public readonly root = new THREE.Group();
   private aiCars: AiCarAgent[] = [];
@@ -56,46 +92,103 @@ export class TrafficAndPedestrians {
 
   private buildAiCars(): void {
     const colors = [0x2563eb, 0xf59e0b, 0x0f766e];
-    // 3 training cars driving in the outer clockwise / counter-clockwise keep-left lanes
-    const loops: { x: number; z: number }[][] = [
-      // Outer keep-left clockwise loop (left lane is outer perimeter ~47.75 / 77.75)
-      [
-        { x: -45, z: -47.75 },
-        { x: 55, z: -47.75 },
-        { x: 77.75, z: -28 },
-        { x: 77.75, z: 28 },
-        { x: 55, z: 47.75 },
-        { x: -55, z: 47.75 },
-        { x: -77.75, z: 28 },
-        { x: -77.75, z: -28 },
-      ],
-      // Inner counter-clockwise loop (left lane is ~44.25 / 74.25)
-      [
-        { x: 45, z: 44.25 },
-        { x: 74.25, z: 25 },
-        { x: 74.25, z: -25 },
-        { x: 45, z: -44.25 },
-        { x: -45, z: -44.25 },
-        { x: -74.25, z: -25 },
-        { x: -74.25, z: 25 },
-        { x: -45, z: 44.25 },
-      ],
-      // Central & South training circuit
-      [
-        { x: -1.75, z: -34 },
-        { x: -1.75, z: 34 },
-        { x: -45, z: 44.25 },
-        { x: -74.25, z: 24 },
-        { x: -74.25, z: -24 },
-        { x: -45, z: -44.25 },
-      ],
+
+    // 1. Outer Clockwise Loop (Left-hand lane center offset = +1.75m outward from R=14 centerline => R_outer = 15.75m)
+    // Also smoothly changes to right lane (z = -44.25) with Right/Left blinkers around the parked obstacle van at (-10, -48.1)!
+    const outerLoop: AiWaypoint[] = [
+      { x: -58, z: -47.75 },
+      { x: -32, z: -47.75 },
+      // Signal right 3s before passing parked van at (-10, -48.1)
+      { x: -25, z: -47.75, signal: 'right' },
+      { x: -18, z: -44.25, signal: 'right' },
+      { x: -10, z: -44.25 },
+      { x: -2, z: -44.25, signal: 'left' },
+      { x: 6, z: -47.75, signal: 'left' },
+      { x: 32, z: -47.75 },
+      { x: 56, z: -47.75 },
+      // NE corner arc (center 62, -32, R = 15.75, theta: PI/2 -> 0)
+      ...sampleCornerArc(62, -32, 15.75, Math.PI / 2, 0, 8),
+      { x: 77.75, z: -16 },
+      { x: 77.75, z: 16 },
+      // SE corner arc (center 62, 32, R = 15.75, theta: 0 -> -PI/2)
+      ...sampleCornerArc(62, 32, 15.75, 0, -Math.PI / 2, 8),
+      { x: 40, z: 47.75 },
+      { x: 22, z: 47.75, signal: 'right' },
+      // Pass around Start Bay 1 (12, 48.1) in the inner lane (z = 44.25) so AI never hits player parked at Start Bay!
+      { x: 15, z: 44.25, signal: 'right' },
+      { x: 4, z: 44.25, signal: 'left' },
+      { x: -4, z: 47.75 },
+      { x: -35, z: 47.75 },
+      // SW corner arc (center -62, 32, R = 15.75, theta: -PI/2 -> -PI)
+      ...sampleCornerArc(-62, 32, 15.75, -Math.PI / 2, -Math.PI, 8),
+      { x: -77.75, z: 16 },
+      { x: -77.75, z: -16 },
+      // NW corner arc (center -62, -32, R = 15.75, theta: PI -> PI/2)
+      ...sampleCornerArc(-62, -32, 15.75, Math.PI, Math.PI / 2, 8),
     ];
+
+    // 2. Inner Counter-Clockwise Loop (Left-hand lane center offset = -1.75m inward from R=14 centerline => R_inner = 12.25m)
+    const innerLoop: AiWaypoint[] = [
+      { x: -45, z: 44.25 },
+      { x: 0, z: 44.25 },
+      { x: 45, z: 44.25 },
+      // SE corner arc (center 62, 32, R = 12.25, theta: -PI/2 -> 0)
+      ...sampleCornerArc(62, 32, 12.25, -Math.PI / 2, 0, 8),
+      { x: 74.25, z: 16 },
+      { x: 74.25, z: -16 },
+      // NE corner arc (center 62, -32, R = 12.25, theta: 0 -> PI/2)
+      ...sampleCornerArc(62, -32, 12.25, 0, Math.PI / 2, 8),
+      { x: 45, z: -44.25 },
+      { x: 0, z: -44.25 },
+      { x: -45, z: -44.25 },
+      // NW corner arc (center -62, -32, R = 12.25, theta: PI/2 -> PI)
+      ...sampleCornerArc(-62, -32, 12.25, Math.PI / 2, Math.PI, 8),
+      { x: -74.25, z: -16 },
+      { x: -74.25, z: 16 },
+      // SW corner arc (center -62, 32, R = 12.25, theta: -PI -> -PI/2)
+      ...sampleCornerArc(-62, 32, 12.25, -Math.PI, -Math.PI / 2, 8),
+    ];
+
+    // 3. Central Cross & West Half-Loop (strictly on Central NS road x = -1.75, North road z = -44.25, West road x = -74.25, South road z = 44.25)
+    // Includes 90-degree intersection turns with left turn signals, stop sign at (x = -1.75, z = -38.5), and traffic signal at (x = -1.75, z = 8.5)!
+    const centralCircuit: AiWaypoint[] = [
+      // Driving North along Central NS Avenue left lane (x = -1.75)
+      { x: -1.75, z: 36.0 },
+      { x: -1.75, z: 22.0 },
+      { x: -1.75, z: 10.5 }, // Before central traffic signal stop line (z = 8.5)
+      { x: -1.75, z: 0.0 },
+      { x: -1.75, z: -24.0, signal: 'left' },
+      { x: -1.75, z: -36.5, signal: 'left' }, // Approaches stop-north-t (止まれ at z = -38.5)
+      { x: -1.75, z: -41.5, signal: 'left' },
+      // Smooth 90-deg Left turn onto North Perimeter Westbound left lane (z = -44.25)
+      { x: -3.2, z: -43.5, signal: 'left' },
+      { x: -6.0, z: -44.25 },
+      { x: -32.0, z: -44.25 },
+      { x: -56.0, z: -44.25 },
+      // NW corner arc (center -62, -32, R = 12.25, theta: PI/2 -> PI)
+      ...sampleCornerArc(-62, -32, 12.25, Math.PI / 2, Math.PI, 8),
+      { x: -74.25, z: -16.0 },
+      { x: -74.25, z: 16.0 },
+      // SW corner arc (center -62, 32, R = 12.25, theta: -PI -> -PI/2)
+      ...sampleCornerArc(-62, 32, 12.25, -Math.PI, -Math.PI / 2, 8),
+      { x: -45.0, z: 44.25 },
+      { x: -18.0, z: 44.25, signal: 'left' },
+      { x: -6.0, z: 44.25, signal: 'left' },
+      // Smooth 90-deg Left turn onto Central NS Avenue Northbound left lane (x = -1.75)
+      { x: -2.6, z: 43.0, signal: 'left' },
+      { x: -1.75, z: 40.0 },
+    ];
+
+    const loops = [outerLoop, innerLoop, centralCircuit];
 
     for (let i = 0; i < loops.length; i++) {
       const wps = loops[i];
       const start = wps[0];
       const next = wps[1];
-      const { group, wheels, brakeLamps } = this.createTrainingSedanMesh(colors[i % colors.length], i + 2);
+      const { group, wheels, brakeLamps, signalLeftLamps, signalRightLamps } = this.createTrainingSedanMesh(
+        colors[i % colors.length],
+        i + 2
+      );
       const heading = Math.atan2(-(next.x - start.x), -(next.z - start.z));
       group.position.set(start.x, 0, start.z);
       group.rotation.y = heading;
@@ -105,13 +198,19 @@ export class TrafficAndPedestrians {
         group,
         wheels,
         brakeLamps,
+        signalLeftLamps,
+        signalRightLamps,
         waypoints: wps,
         wpIndex: 1,
         x: start.x,
         z: start.z,
         heading,
-        speedMs: 5.5,
-        maxSpeedMs: 6.2 + (i % 2) * 0.8,
+        speedMs: 5.0,
+        maxSpeedMs: 6.0 + (i % 2) * 0.6,
+        blinker: 'off',
+        blinkerTimer: 0,
+        stopHoldTimer: 0,
+        lastStoppedZoneId: '',
       });
     }
   }
@@ -120,6 +219,8 @@ export class TrafficAndPedestrians {
     group: THREE.Group;
     wheels: THREE.Mesh[];
     brakeLamps: THREE.MeshStandardMaterial[];
+    signalLeftLamps: THREE.MeshStandardMaterial[];
+    signalRightLamps: THREE.MeshStandardMaterial[];
   } {
     const group = new THREE.Group();
     const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.32, metalness: 0.2 });
@@ -134,6 +235,16 @@ export class TrafficAndPedestrians {
       color: 0xdc2626,
       emissive: 0xdc2626,
       emissiveIntensity: 0.25,
+    });
+    const sigLeftMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      emissive: 0xf59e0b,
+      emissiveIntensity: 0.05,
+    });
+    const sigRightMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      emissive: 0xf59e0b,
+      emissiveIntensity: 0.05,
     });
 
     // Lower body (-Z is forward!)
@@ -178,14 +289,25 @@ export class TrafficAndPedestrians {
     group.add(roofSign);
 
     // Headlights (-Z front) & Brake lights (+Z rear)
-    for (const sx of [-0.56, 0.56]) {
-      const hl = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.06), headMat);
+    for (const sx of [-0.54, 0.54]) {
+      const hl = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.12, 0.06), headMat);
       hl.position.set(sx, 0.58, -2.13);
       group.add(hl);
 
-      const bl = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.12, 0.06), brakeMat);
+      const bl = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.06), brakeMat);
       bl.position.set(sx, 0.6, 2.13);
       group.add(bl);
+    }
+
+    // Turn Signal Lamps (-X is Left, +X is Right when facing -Z!)
+    for (const zPos of [-2.13, 2.13]) {
+      const sigL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.11, 0.07), sigLeftMat);
+      sigL.position.set(-0.75, 0.58, zPos);
+      group.add(sigL);
+
+      const sigR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.11, 0.07), sigRightMat);
+      sigR.position.set(0.75, 0.58, zPos);
+      group.add(sigR);
     }
 
     const wheels: THREE.Mesh[] = [];
@@ -203,7 +325,13 @@ export class TrafficAndPedestrians {
       wheels.push(w);
     }
 
-    return { group, wheels, brakeLamps: [brakeMat] };
+    return {
+      group,
+      wheels,
+      brakeLamps: [brakeMat],
+      signalLeftLamps: [sigLeftMat],
+      signalRightLamps: [sigRightMat],
+    };
   }
 
   private buildPedestrians(): void {
@@ -273,7 +401,6 @@ export class TrafficAndPedestrians {
     const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
     const hairMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.8 });
 
-    // Head
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), skinMat);
     head.position.y = 1.56;
     head.castShadow = true;
@@ -286,13 +413,11 @@ export class TrafficAndPedestrians {
     hair.position.y = 1.58;
     group.add(hair);
 
-    // Torso
     const torso = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.52, 0.18), shirtMat);
     torso.position.y = 1.15;
     torso.castShadow = true;
     group.add(torso);
 
-    // Legs
     const makeLimb = (w: number, h: number, d: number, mat: THREE.Material, px: number, py: number) => {
       const pivot = new THREE.Group();
       pivot.position.set(px, py, 0);
@@ -317,6 +442,8 @@ export class TrafficAndPedestrians {
     let pedestrianLabelJa: string | undefined;
     let pedestrianLabelEn: string | undefined;
     let trafficCollision = false;
+
+    const railState = signals.getRailroadState();
 
     // 1. Update Pedestrians
     for (const ped of this.pedestrians) {
@@ -374,7 +501,6 @@ export class TrafficAndPedestrians {
       // Check player car proximity to crossing pedestrian (Road Traffic Act Art. 38: 歩行者妨害 / 歩行者保護違反)
       const dToPlayer = distance(playerState.x, playerState.z, ped.x, ped.z);
       if (ped.isOnCrosswalk && dToPlayer < 3.4 && Math.abs(playerState.speedMs) > 0.45) {
-        // Verify pedestrian is ahead of or beside the moving player car
         const toPedX = ped.x - playerState.x;
         const toPedZ = ped.z - playerState.z;
         const moveSign = playerState.speedMs >= 0 ? 1 : -1;
@@ -390,59 +516,122 @@ export class TrafficAndPedestrians {
       }
     }
 
-    // 2. Update AI Training Cars
-    for (const car of this.aiCars) {
-      const target = car.waypoints[car.wpIndex];
-      const dx = target.x - car.x;
-      const dz = target.z - car.z;
-      const distToWp = Math.hypot(dx, dz);
+    // 2. Update AI Training Cars (Strict Road Lane Following + Full Japanese Traffic Rules!)
+    for (let idx = 0; idx < this.aiCars.length; idx++) {
+      const car = this.aiCars[idx];
+      let target = car.waypoints[car.wpIndex];
+      let dx = target.x - car.x;
+      let dz = target.z - car.z;
+      let distToWp = Math.hypot(dx, dz);
 
-      if (distToWp < 3.5) {
+      if (distToWp < 2.1) {
         car.wpIndex = (car.wpIndex + 1) % car.waypoints.length;
+        target = car.waypoints[car.wpIndex];
+        dx = target.x - car.x;
+        dz = target.z - car.z;
+        distToWp = Math.hypot(dx, dz);
       }
 
+      // Activate blinker when approaching a turn or obstacle lane-change waypoint
+      const prevWp = car.waypoints[(car.wpIndex - 1 + car.waypoints.length) % car.waypoints.length];
+      car.blinker = target.signal ?? prevWp.signal ?? 'off';
+      car.blinkerTimer += dt;
+      const blinkerLit = car.blinker !== 'off' && Math.floor(car.blinkerTimer * 2.6) % 2 === 0;
+
+      // Crisp steering to stay centered in the 3.5m asphalt lane
       const desiredHeading = Math.atan2(-dx, -dz);
       let headingDiff = desiredHeading - car.heading;
       while (headingDiff > Math.PI) headingDiff -= Math.PI * 2;
       while (headingDiff < -Math.PI) headingDiff += Math.PI * 2;
-      car.heading += Math.sign(headingDiff) * Math.min(Math.abs(headingDiff), 2.4 * dt);
+      car.heading += Math.sign(headingDiff) * Math.min(Math.abs(headingDiff), 4.6 * dt);
 
-      // Check if AI car should stop for player car, pedestrian, or red signal
-      let shouldStop = false;
       const fwdX = -Math.sin(car.heading);
       const fwdZ = -Math.cos(car.heading);
 
-      // Stop behind player if player is in front within 8m
-      const dPlayer = distance(car.x, car.z, playerState.x, playerState.z);
-      if (dPlayer < 8.5) {
-        const dot = ((playerState.x - car.x) * fwdX + (playerState.z - car.z) * fwdZ) / Math.max(0.1, dPlayer);
-        if (dot > 0.55) shouldStop = true;
+      let shouldStop = false;
+
+      // Rule A: Mandatory 2-Second Complete Stop at 止まれ Stop Signs & Railroad Crossings, plus Red/Yellow Traffic Lights
+      if (car.stopHoldTimer > 0) {
+        car.stopHoldTimer -= dt;
+        shouldStop = true;
+      } else {
+        for (const zone of STOP_LINE_ZONES) {
+          const zdx = car.x - zone.x;
+          const zdz = car.z - zone.z;
+          const signedDist = zdx * zone.dirX + zdz * zone.dirZ; // negative = before stop line
+          const perpX = -zone.dirZ;
+          const perpZ = zone.dirX;
+          const lateralDist = Math.abs(zdx * perpX + zdz * perpZ);
+          const fwdDot = fwdX * zone.dirX + fwdZ * zone.dirZ;
+
+          if (lateralDist <= zone.halfWidth + 0.8 && fwdDot > 0.7 && signedDist >= -6.5 && signedDist <= -0.2) {
+            if (zone.kind === 'trafficLight' && zone.axis) {
+              const light = signals.getLightForAxis(zone.axis);
+              if (light === 'red' || light === 'yellow') {
+                shouldStop = true;
+              }
+            } else if (zone.kind === 'stopSign') {
+              if (car.lastStoppedZoneId !== zone.id) {
+                shouldStop = true;
+                if (car.speedMs < 0.15) {
+                  car.stopHoldTimer = 1.8; // Full 2-second 止まれ stop!
+                  car.lastStoppedZoneId = zone.id;
+                }
+              }
+            } else if (zone.kind === 'railroad') {
+              if (railState.isWarningActive) {
+                shouldStop = true;
+              } else if (car.lastStoppedZoneId !== zone.id) {
+                shouldStop = true;
+                if (car.speedMs < 0.15) {
+                  car.stopHoldTimer = 1.8;
+                  car.lastStoppedZoneId = zone.id;
+                }
+              }
+            }
+          } else if (car.lastStoppedZoneId === zone.id && Math.hypot(zdx, zdz) > 10.0) {
+            car.lastStoppedZoneId = '';
+          }
+        }
       }
-      // Collision check between player and AI training car
-      if (dPlayer < 2.45 && Math.abs(playerState.speedMs) > 0.25) {
+
+      // Rule B: Stop behind the player car if player is ahead within 10m
+      const dPlayer = distance(car.x, car.z, playerState.x, playerState.z);
+      if (dPlayer < 10.0) {
+        const dot = ((playerState.x - car.x) * fwdX + (playerState.z - car.z) * fwdZ) / Math.max(0.1, dPlayer);
+        if (dot > 0.45) shouldStop = true;
+      }
+
+      // Rule C: Stop behind other AI training cars
+      for (let j = 0; j < this.aiCars.length; j++) {
+        if (j === idx) continue;
+        const other = this.aiCars[j];
+        const dOther = distance(car.x, car.z, other.x, other.z);
+        if (dOther < 8.5) {
+          const dot = ((other.x - car.x) * fwdX + (other.z - car.z) * fwdZ) / Math.max(0.1, dOther);
+          if (dot > 0.5) shouldStop = true;
+        }
+      }
+
+      // Rule D: Stop for crossing pedestrians at any zebra crosswalk
+      for (const ped of this.pedestrians) {
+        if (!ped.isOnCrosswalk && ped.progress > 0.08 && ped.progress < 0.92) continue;
+        const dPed = distance(car.x, car.z, ped.x, ped.z);
+        if (dPed < 7.5) {
+          const dot = ((ped.x - car.x) * fwdX + (ped.z - car.z) * fwdZ) / Math.max(0.1, dPed);
+          if (dot > 0.35) shouldStop = true;
+        }
+      }
+
+      // Collision check between moving player car and AI car
+      if (dPlayer < 2.35 && Math.abs(playerState.speedMs) > 0.35) {
         trafficCollision = true;
       }
 
-      // Stop for central red signal
-      if (Math.abs(car.x) < 12 && Math.abs(car.z) < 12) {
-        const axis = Math.abs(fwdZ) > Math.abs(fwdX) ? 'NS' : 'EW';
-        if (signals.getLightForAxis(axis) !== 'green') {
-          shouldStop = true;
-        }
-      }
-
-      // Stop for crossing pedestrians
-      for (const ped of this.pedestrians) {
-        if (!ped.isOnCrosswalk) continue;
-        const dPed = distance(car.x, car.z, ped.x, ped.z);
-        if (dPed < 6.0) {
-          const dot = ((ped.x - car.x) * fwdX + (ped.z - car.z) * fwdZ) / Math.max(0.1, dPed);
-          if (dot > 0.4) shouldStop = true;
-        }
-      }
-
-      const targetSpeed = shouldStop ? 0 : car.maxSpeedMs;
-      const accel = shouldStop ? 7.5 : 2.8;
+      // Slow down smoothly on curves (徐行 on corners!)
+      const isTurning = Math.abs(headingDiff) > 0.14;
+      const targetSpeed = shouldStop ? 0 : isTurning ? 3.8 : car.maxSpeedMs;
+      const accel = shouldStop ? 8.5 : 3.2;
       if (car.speedMs < targetSpeed) {
         car.speedMs = Math.min(targetSpeed, car.speedMs + accel * dt);
       } else {
@@ -459,6 +648,12 @@ export class TrafficAndPedestrians {
       }
       for (const bm of car.brakeLamps) {
         bm.emissiveIntensity = shouldStop || car.speedMs < 0.3 ? 2.4 : 0.25;
+      }
+      for (const lm of car.signalLeftLamps) {
+        lm.emissiveIntensity = blinkerLit && (car.blinker === 'left' || car.blinker === 'hazard') ? 2.6 : 0.05;
+      }
+      for (const rm of car.signalRightLamps) {
+        rm.emissiveIntensity = blinkerLit && (car.blinker === 'right' || car.blinker === 'hazard') ? 2.6 : 0.05;
       }
     }
 

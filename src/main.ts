@@ -301,6 +301,8 @@ function spawnAtPose(x: number, z: number, heading: number, mode: SimMode) {
   document.getElementById('examResultModal')!.hidden = true;
   document.getElementById('violationFreezeOverlay')!.hidden = true;
   violationFreezeActive = false;
+  safePoseHistory.length = 0;
+  safePoseHistory.push({ x, z, heading, gear: vehicleState.gear });
   syncPreDriveChecklistUI();
   cameraSys.setMode(cameraSys.getMode(), vehicleState, vehicleHandle);
 }
@@ -927,171 +929,127 @@ window.addEventListener('keydown', (ev) => {
 });
 
 // ==========================================================
-// 2. Red Error Freeze Screen with Mandatory Rule Study & Comprehension Gate
+// 2. Concise Red Rule Violation Freeze & Automatic Safe Car Recovery ("Unstuck")
 // ==========================================================
 const violationFreezeOverlayEl = document.getElementById('violationFreezeOverlay')!;
 const strictRuleFreezeChk = document.getElementById('strictRuleFreezeChk') as HTMLInputElement;
-const vfQuizOpt0Btn = document.getElementById('vfQuizOpt0') as HTMLButtonElement;
-const vfQuizOpt1Btn = document.getElementById('vfQuizOpt1') as HTMLButtonElement;
-const vfQuizFeedbackEl = document.getElementById('vfQuizFeedback')!;
-const vfUnderstoodChk = document.getElementById('vfUnderstoodChk') as HTMLInputElement;
-const vfConfirmRowEl = document.getElementById('vfConfirmRow')!;
 const vfResumeBtn = document.getElementById('vfResumeBtn') as HTMLButtonElement;
 const vfRetryStationBtn = document.getElementById('vfRetryStationBtn') as HTMLButtonElement;
 
 let violationFreezeActive = false;
-let currentQuizCorrectIdx = 0;
-let freezeQuizPassed = false;
-let freezeRuleConfirmed = false;
+interface SafePoseSample {
+  x: number;
+  z: number;
+  heading: number;
+  gear: VehicleState['gear'];
+}
+const safePoseHistory: SafePoseSample[] = [];
+let lastSafeSampleTime = -999;
 
-function syncFreezeUnlockState() {
-  const isJa = settings.locale === 'ja';
-  const canUnfreeze = freezeQuizPassed && freezeRuleConfirmed;
-  vfConfirmRowEl.classList.toggle('unlocked', canUnfreeze);
-  vfResumeBtn.disabled = !canUnfreeze;
-  vfRetryStationBtn.disabled = !canUnfreeze;
+function recordSafePoseIfClean(collision: CollisionReport, trafficSafety?: TrafficSafetyReport) {
+  const isClean =
+    !collision.anyCurbTouch &&
+    !collision.anyCurbMount &&
+    !collision.poleHit &&
+    !collision.obstacleHit &&
+    !trafficSafety?.pedestrianDanger &&
+    !trafficSafety?.trafficCollision;
+  if (!isClean) return;
 
-  if (canUnfreeze) {
-    vfResumeBtn.textContent = isJa
-      ? '✅ ルール理解確認済み：ロック解除して再開 [Space / Enter]'
-      : '✅ Rule Understood — Unfreeze & Resume Driving [Space / Enter]';
-    vfRetryStationBtn.textContent = isJa
-      ? '🔄 この課題を最初からやり直す (Retry Station)'
-      : '🔄 Retry This Station From Start';
-  } else {
-    vfResumeBtn.textContent = isJa
-      ? '🔒 上のクイズ正解＋「理解しました」チェックでロック解除'
-      : '🔒 Answer Quiz & Check "I Understand" Above to Unfreeze';
-    vfRetryStationBtn.textContent = isJa
-      ? '🔒 学習・確認後にやり直し可能'
-      : '🔒 Study & Confirm Above to Retry';
+  if (simTimeSec - lastSafeSampleTime >= 0.25) {
+    lastSafeSampleTime = simTimeSec;
+    const prev = safePoseHistory[safePoseHistory.length - 1];
+    if (!prev || Math.hypot(vehicleState.x - prev.x, vehicleState.z - prev.z) > 0.35) {
+      safePoseHistory.push({
+        x: vehicleState.x,
+        z: vehicleState.z,
+        heading: vehicleState.heading,
+        gear: vehicleState.gear === 'R' ? (settings.transmission === 'AT' ? 'D' : '1') : vehicleState.gear,
+      });
+      if (safePoseHistory.length > 24) {
+        safePoseHistory.shift();
+      }
+    }
   }
 }
 
-function handleFreezeQuizAnswer(selectedIndex: 0 | 1) {
-  audio.unlock();
-  const isJa = settings.locale === 'ja';
-  const isCorrect = selectedIndex === currentQuizCorrectIdx;
-  const clickedBtn = selectedIndex === 0 ? vfQuizOpt0Btn : vfQuizOpt1Btn;
-  const otherBtn = selectedIndex === 0 ? vfQuizOpt1Btn : vfQuizOpt0Btn;
+function unstuckVehicleToSafePose() {
+  const spec = getVehicleSpec(settings.vehicleKind);
+  const checkNow = checkCourseCollisions(vehicleState, spec);
+  const needsPositionRecovery =
+    checkNow.anyCurbMount ||
+    checkNow.anyCurbTouch ||
+    Boolean(checkNow.poleHit) ||
+    Boolean(checkNow.obstacleHit);
 
-  vfQuizFeedbackEl.hidden = false;
-  if (isCorrect) {
-    freezeQuizPassed = true;
-    clickedBtn.classList.remove('wrong');
-    clickedBtn.classList.add('correct');
-    otherBtn.classList.remove('wrong', 'correct');
-    vfQuizFeedbackEl.className = 'vf-quiz-feedback pass';
-    vfQuizFeedbackEl.textContent = isJa
-      ? '⭕ 正解です！この日本の交通ルール・検定基準を正しく理解しました。下の「理解しました」にチェックを入れてロックを解除してください。'
-      : '⭕ Correct! You understand the official Japanese driving test rule. Check the confirmation box below to unfreeze.';
-    audio.playClick(880, 0.06, 0.22);
-  } else {
-    freezeQuizPassed = false;
-    clickedBtn.classList.add('wrong');
-    vfQuizFeedbackEl.className = 'vf-quiz-feedback fail';
-    vfQuizFeedbackEl.textContent = isJa
-      ? '❌ 不正解です。上の「根拠法令・正しい運転操作・教本ポイント」をもう一度読んで正しい選択肢を選んでください。'
-      : '❌ Incorrect. Re-read the Japanese Road Traffic Act rule and textbook points above, then select the correct answer.';
-    audio.playClick(240, 0.08, 0.22);
+  if (needsPositionRecovery && safePoseHistory.length > 0) {
+    // Pick a clean pose from ~1.5 meters / a couple seconds before the collision
+    const idx = Math.max(0, safePoseHistory.length - 5);
+    const safe = safePoseHistory[idx];
+    vehicleState.x = safe.x;
+    vehicleState.z = safe.z;
+    vehicleState.heading = safe.heading;
+    vehicleState.gear = safe.gear;
+  } else if (needsPositionRecovery) {
+    // Fallback: back up 1.6m along opposite of heading
+    vehicleState.x += Math.sin(vehicleState.heading) * 1.6;
+    vehicleState.z += Math.cos(vehicleState.heading) * 1.6;
   }
-  syncFreezeUnlockState();
+
+  vehicleState.speedMs = 0;
+  vehicleState.steerAngleRad = 0;
+  vehicleState.steeringWheelRad = 0;
+  vehicleState.stalled = false;
+  vehicleState.handbrake = false;
+  syncRearAxleFromCenter(vehicleState, spec);
 }
-
-vfQuizOpt0Btn.addEventListener('click', () => handleFreezeQuizAnswer(0));
-vfQuizOpt1Btn.addEventListener('click', () => handleFreezeQuizAnswer(1));
-
-vfUnderstoodChk.addEventListener('change', () => {
-  audio.unlock();
-  freezeRuleConfirmed = vfUnderstoodChk.checked;
-  if (freezeRuleConfirmed) {
-    audio.playClick(760, 0.04, 0.18);
-  }
-  syncFreezeUnlockState();
-});
 
 function showViolationFreezeOverlay(v: ViolationEvent) {
   violationFreezeActive = true;
-  freezeQuizPassed = false;
-  freezeRuleConfirmed = false;
-  vfUnderstoodChk.checked = false;
-  vfQuizFeedbackEl.hidden = true;
-  vfQuizOpt0Btn.classList.remove('correct', 'wrong');
-  vfQuizOpt1Btn.classList.remove('correct', 'wrong');
-
-  // Stop vehicle movement immediately so it doesn't keep rolling while frozen
   vehicleState.speedMs = 0;
 
   const isJa = settings.locale === 'ja';
   document.getElementById('vfTagText')!.textContent = v.instantFail
     ? isJa
-      ? '🚨 検定中止（一発不合格・補助ブレーキ作動） · INSTANT DISQUALIFICATION'
-      : '🚨 INSTANT DISQUALIFICATION (検定中止・補助ブレーキ作動)'
+      ? '🚨 検定中止（一発不合格） · INSTANT FAIL'
+      : '🚨 INSTANT FAIL (検定中止)'
     : isJa
-      ? `⚠️ 日本の技能試験基準 減点違反（-${v.points}点） · JAPANESE EXAM STANDARD VIOLATION`
-      : `⚠️ JAPANESE DRIVING EXAM RULE VIOLATION (-${v.points} PTS · 技能試験減点)`;
+      ? `⚠️ 減点違反 (-${v.points}点) · RULE VIOLATION`
+      : `⚠️ RULE VIOLATION (-${v.points} PTS)`;
 
   document.getElementById('vfTitleText')!.textContent = `${v.labelJa} · ${v.labelEn}`;
 
   const badgeEl = document.getElementById('vfBadgeText')!;
-  badgeEl.textContent = v.instantFail ? '検定中止 / FAIL' : `-${v.points} PTS (減点)`;
+  badgeEl.textContent = v.instantFail ? '検定中止 / FAIL' : `-${v.points} PTS`;
   badgeEl.className = `vf-badge ${v.instantFail ? 'fail' : ''}`;
 
   document.getElementById('vfDetailJa')!.textContent = v.detailJa;
   document.getElementById('vfDetailEn')!.textContent = v.detailEn;
 
-  document.getElementById('vfRuleRefJa')!.textContent =
-    v.ruleRefJa ?? '道路交通法および警察庁「技能試験実施基準」に基づく減点対象行為です。';
-  document.getElementById('vfRuleRefEn')!.textContent =
-    v.ruleRefEn ?? 'Point deduction enforced under the Japanese Road Traffic Act and NPA Practical Exam Standards.';
+  document.getElementById('vfRuleRefJa')!.textContent = v.ruleRefJa ?? '';
+  document.getElementById('vfRuleRefEn')!.textContent = v.ruleRefEn ?? '';
 
-  document.getElementById('vfHowToFixJa')!.textContent =
-    v.howToFixJa ?? '安全確認（ミラーと直接目視）および適切な速度・合図を行ってから進行してください。';
-  document.getElementById('vfHowToFixEn')!.textContent =
-    v.howToFixEn ?? 'Perform full mirror + blind-spot checks, proper signaling, and speed control before proceeding.';
-
-  // Populate Study Guide Textbook Excerpt & Interactive Comprehension Quiz
-  const q = v.quiz;
-  document.getElementById('vfChapterRefText')!.textContent = q
-    ? `${q.chapterRefJa} / ${q.chapterRefEn}`
-    : '外免切替・技能試験 公式教本ポイント / Official Japanese Driving School Textbook';
-
-  const pointsListEl = document.getElementById('vfStudyPointsList')!;
-  pointsListEl.innerHTML = '';
-  if (q) {
-    for (let i = 0; i < q.studyPointJa.length; i++) {
-      const li = document.createElement('li');
-      li.innerHTML = `<strong>${q.studyPointJa[i]}</strong><br/><span style="color:#cbd5e1;font-size:11.5px;">${q.studyPointEn[i] ?? ''}</span>`;
-      pointsListEl.append(li);
-    }
-    currentQuizCorrectIdx = q.correctIndex;
-    document.getElementById('vfQuizQuestionJa')!.textContent = q.questionJa;
-    document.getElementById('vfQuizQuestionEn')!.textContent = q.questionEn;
-    vfQuizOpt0Btn.innerHTML = `<strong>${q.optionsJa[0]}</strong><br/><span style="color:#cbd5e1;font-size:11.5px;">${q.optionsEn[0]}</span>`;
-    vfQuizOpt1Btn.innerHTML = `<strong>${q.optionsJa[1]}</strong><br/><span style="color:#cbd5e1;font-size:11.5px;">${q.optionsEn[1]}</span>`;
-  }
+  document.getElementById('vfHowToFixJa')!.textContent = v.howToFixJa ?? '';
+  document.getElementById('vfHowToFixEn')!.textContent = v.howToFixEn ?? '';
 
   const score = examiner.getScore();
   document.getElementById('vfScoreRemainText')!.textContent = isJa
-    ? `現在の持ち点: ${score} / 100点 （合格基準: 70点以上）`
-    : `Remaining Score: ${score} / 100 pts (Pass Threshold: 70 pts)`;
+    ? `持ち点: ${score} / 100点 (70点以上で合格)`
+    : `Score: ${score} / 100 pts (70 pts to pass)`;
 
-  syncFreezeUnlockState();
+  vfResumeBtn.textContent = isJa
+    ? '✅ ルールを理解して車を安全な位置に戻し再開 [Space / Enter]'
+    : '✅ I Understand — Unstuck Car & Resume Driving [Space / Enter]';
+
   violationFreezeOverlayEl.hidden = false;
 }
 
 function dismissViolationFreezeOverlay() {
   if (!violationFreezeActive) return;
-  // Require studying and confirming the rule before unfreezing!
-  if (!freezeQuizPassed || !freezeRuleConfirmed) {
-    audio.playClick(220, 0.07, 0.22);
-    return;
-  }
   violationFreezeActive = false;
   violationFreezeOverlayEl.hidden = true;
-  if (examiner.isTerminated() && examiner.getMode() === 'exam') {
-    showExamSummary(examiner.getSummary(vehicleState));
-  }
+  // Automatically unstuck the car from curbs/poles/obstacles so the user can drive immediately!
+  unstuckVehicleToSafePose();
 }
 
 vfResumeBtn.addEventListener('click', () => {
@@ -1100,7 +1058,6 @@ vfResumeBtn.addEventListener('click', () => {
 });
 
 vfRetryStationBtn.addEventListener('click', () => {
-  if (!freezeQuizPassed || !freezeRuleConfirmed) return;
   audio.unlock();
   violationFreezeActive = false;
   violationFreezeOverlayEl.hidden = true;
@@ -1114,7 +1071,7 @@ document.getElementById('vfOpenRulebookBtn')!.addEventListener('click', () => {
 
 window.addEventListener('keydown', (ev) => {
   if (!violationFreezeActive) return;
-  if ((ev.key === 'Enter' || ev.key === ' ') && freezeQuizPassed && freezeRuleConfirmed) {
+  if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Escape') {
     ev.preventDefault();
     dismissViolationFreezeOverlay();
   }
@@ -1827,6 +1784,7 @@ function animate(nowMs: number) {
     if (courseMode === 'kyoshujo') {
       const trafficSafety: TrafficSafetyReport = trafficAndPeds.update(FIXED_DT, vehicleState, signals);
       latestCollision = checkCourseCollisions(vehicleState, spec);
+      recordSafePoseIfClean(latestCollision, trafficSafety);
       if (latestCollision.pushX !== 0 || latestCollision.pushZ !== 0) {
         vehicleState.x += latestCollision.pushX;
         vehicleState.z += latestCollision.pushZ;
