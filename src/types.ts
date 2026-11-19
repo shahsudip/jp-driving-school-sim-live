@@ -159,6 +159,18 @@ export type ViolationCode =
   | 'PEDESTRIAN_PRIORITY'
   | 'TRAFFIC_COLLISION';
 
+export interface RuleStudyQuiz {
+  questionJa: string;
+  questionEn: string;
+  optionsJa: [string, string];
+  optionsEn: [string, string];
+  correctIndex: 0 | 1;
+  chapterRefJa: string;
+  chapterRefEn: string;
+  studyPointJa: string[];
+  studyPointEn: string[];
+}
+
 export interface ViolationEvent {
   id: string;
   code: ViolationCode;
@@ -173,6 +185,7 @@ export interface ViolationEvent {
   ruleRefEn?: string;
   howToFixJa?: string;
   howToFixEn?: string;
+  quiz?: RuleStudyQuiz;
 }
 
 export interface ExamSummary {

@@ -927,15 +927,99 @@ window.addEventListener('keydown', (ev) => {
 });
 
 // ==========================================================
-// 2. Red Error Freeze Screen on Any Japanese Rule Violation
+// 2. Red Error Freeze Screen with Mandatory Rule Study & Comprehension Gate
 // ==========================================================
 const violationFreezeOverlayEl = document.getElementById('violationFreezeOverlay')!;
 const strictRuleFreezeChk = document.getElementById('strictRuleFreezeChk') as HTMLInputElement;
+const vfQuizOpt0Btn = document.getElementById('vfQuizOpt0') as HTMLButtonElement;
+const vfQuizOpt1Btn = document.getElementById('vfQuizOpt1') as HTMLButtonElement;
+const vfQuizFeedbackEl = document.getElementById('vfQuizFeedback')!;
+const vfUnderstoodChk = document.getElementById('vfUnderstoodChk') as HTMLInputElement;
+const vfConfirmRowEl = document.getElementById('vfConfirmRow')!;
+const vfResumeBtn = document.getElementById('vfResumeBtn') as HTMLButtonElement;
+const vfRetryStationBtn = document.getElementById('vfRetryStationBtn') as HTMLButtonElement;
+
 let violationFreezeActive = false;
+let currentQuizCorrectIdx = 0;
+let freezeQuizPassed = false;
+let freezeRuleConfirmed = false;
+
+function syncFreezeUnlockState() {
+  const isJa = settings.locale === 'ja';
+  const canUnfreeze = freezeQuizPassed && freezeRuleConfirmed;
+  vfConfirmRowEl.classList.toggle('unlocked', canUnfreeze);
+  vfResumeBtn.disabled = !canUnfreeze;
+  vfRetryStationBtn.disabled = !canUnfreeze;
+
+  if (canUnfreeze) {
+    vfResumeBtn.textContent = isJa
+      ? '✅ ルール理解確認済み：ロック解除して再開 [Space / Enter]'
+      : '✅ Rule Understood — Unfreeze & Resume Driving [Space / Enter]';
+    vfRetryStationBtn.textContent = isJa
+      ? '🔄 この課題を最初からやり直す (Retry Station)'
+      : '🔄 Retry This Station From Start';
+  } else {
+    vfResumeBtn.textContent = isJa
+      ? '🔒 上のクイズ正解＋「理解しました」チェックでロック解除'
+      : '🔒 Answer Quiz & Check "I Understand" Above to Unfreeze';
+    vfRetryStationBtn.textContent = isJa
+      ? '🔒 学習・確認後にやり直し可能'
+      : '🔒 Study & Confirm Above to Retry';
+  }
+}
+
+function handleFreezeQuizAnswer(selectedIndex: 0 | 1) {
+  audio.unlock();
+  const isJa = settings.locale === 'ja';
+  const isCorrect = selectedIndex === currentQuizCorrectIdx;
+  const clickedBtn = selectedIndex === 0 ? vfQuizOpt0Btn : vfQuizOpt1Btn;
+  const otherBtn = selectedIndex === 0 ? vfQuizOpt1Btn : vfQuizOpt0Btn;
+
+  vfQuizFeedbackEl.hidden = false;
+  if (isCorrect) {
+    freezeQuizPassed = true;
+    clickedBtn.classList.remove('wrong');
+    clickedBtn.classList.add('correct');
+    otherBtn.classList.remove('wrong', 'correct');
+    vfQuizFeedbackEl.className = 'vf-quiz-feedback pass';
+    vfQuizFeedbackEl.textContent = isJa
+      ? '⭕ 正解です！この日本の交通ルール・検定基準を正しく理解しました。下の「理解しました」にチェックを入れてロックを解除してください。'
+      : '⭕ Correct! You understand the official Japanese driving test rule. Check the confirmation box below to unfreeze.';
+    audio.playClick(880, 0.06, 0.22);
+  } else {
+    freezeQuizPassed = false;
+    clickedBtn.classList.add('wrong');
+    vfQuizFeedbackEl.className = 'vf-quiz-feedback fail';
+    vfQuizFeedbackEl.textContent = isJa
+      ? '❌ 不正解です。上の「根拠法令・正しい運転操作・教本ポイント」をもう一度読んで正しい選択肢を選んでください。'
+      : '❌ Incorrect. Re-read the Japanese Road Traffic Act rule and textbook points above, then select the correct answer.';
+    audio.playClick(240, 0.08, 0.22);
+  }
+  syncFreezeUnlockState();
+}
+
+vfQuizOpt0Btn.addEventListener('click', () => handleFreezeQuizAnswer(0));
+vfQuizOpt1Btn.addEventListener('click', () => handleFreezeQuizAnswer(1));
+
+vfUnderstoodChk.addEventListener('change', () => {
+  audio.unlock();
+  freezeRuleConfirmed = vfUnderstoodChk.checked;
+  if (freezeRuleConfirmed) {
+    audio.playClick(760, 0.04, 0.18);
+  }
+  syncFreezeUnlockState();
+});
 
 function showViolationFreezeOverlay(v: ViolationEvent) {
   violationFreezeActive = true;
-  // Stop vehicle movement immediately so it doesn't keep rolling into the curb/intersection while frozen
+  freezeQuizPassed = false;
+  freezeRuleConfirmed = false;
+  vfUnderstoodChk.checked = false;
+  vfQuizFeedbackEl.hidden = true;
+  vfQuizOpt0Btn.classList.remove('correct', 'wrong');
+  vfQuizOpt1Btn.classList.remove('correct', 'wrong');
+
+  // Stop vehicle movement immediately so it doesn't keep rolling while frozen
   vehicleState.speedMs = 0;
 
   const isJa = settings.locale === 'ja';
@@ -966,16 +1050,43 @@ function showViolationFreezeOverlay(v: ViolationEvent) {
   document.getElementById('vfHowToFixEn')!.textContent =
     v.howToFixEn ?? 'Perform full mirror + blind-spot checks, proper signaling, and speed control before proceeding.';
 
+  // Populate Study Guide Textbook Excerpt & Interactive Comprehension Quiz
+  const q = v.quiz;
+  document.getElementById('vfChapterRefText')!.textContent = q
+    ? `${q.chapterRefJa} / ${q.chapterRefEn}`
+    : '外免切替・技能試験 公式教本ポイント / Official Japanese Driving School Textbook';
+
+  const pointsListEl = document.getElementById('vfStudyPointsList')!;
+  pointsListEl.innerHTML = '';
+  if (q) {
+    for (let i = 0; i < q.studyPointJa.length; i++) {
+      const li = document.createElement('li');
+      li.innerHTML = `<strong>${q.studyPointJa[i]}</strong><br/><span style="color:#cbd5e1;font-size:11.5px;">${q.studyPointEn[i] ?? ''}</span>`;
+      pointsListEl.append(li);
+    }
+    currentQuizCorrectIdx = q.correctIndex;
+    document.getElementById('vfQuizQuestionJa')!.textContent = q.questionJa;
+    document.getElementById('vfQuizQuestionEn')!.textContent = q.questionEn;
+    vfQuizOpt0Btn.innerHTML = `<strong>${q.optionsJa[0]}</strong><br/><span style="color:#cbd5e1;font-size:11.5px;">${q.optionsEn[0]}</span>`;
+    vfQuizOpt1Btn.innerHTML = `<strong>${q.optionsJa[1]}</strong><br/><span style="color:#cbd5e1;font-size:11.5px;">${q.optionsEn[1]}</span>`;
+  }
+
   const score = examiner.getScore();
   document.getElementById('vfScoreRemainText')!.textContent = isJa
     ? `現在の持ち点: ${score} / 100点 （合格基準: 70点以上）`
     : `Remaining Score: ${score} / 100 pts (Pass Threshold: 70 pts)`;
 
+  syncFreezeUnlockState();
   violationFreezeOverlayEl.hidden = false;
 }
 
 function dismissViolationFreezeOverlay() {
   if (!violationFreezeActive) return;
+  // Require studying and confirming the rule before unfreezing!
+  if (!freezeQuizPassed || !freezeRuleConfirmed) {
+    audio.playClick(220, 0.07, 0.22);
+    return;
+  }
   violationFreezeActive = false;
   violationFreezeOverlayEl.hidden = true;
   if (examiner.isTerminated() && examiner.getMode() === 'exam') {
@@ -983,12 +1094,13 @@ function dismissViolationFreezeOverlay() {
   }
 }
 
-document.getElementById('vfResumeBtn')!.addEventListener('click', () => {
+vfResumeBtn.addEventListener('click', () => {
   audio.unlock();
   dismissViolationFreezeOverlay();
 });
 
-document.getElementById('vfRetryStationBtn')!.addEventListener('click', () => {
+vfRetryStationBtn.addEventListener('click', () => {
+  if (!freezeQuizPassed || !freezeRuleConfirmed) return;
   audio.unlock();
   violationFreezeActive = false;
   violationFreezeOverlayEl.hidden = true;
@@ -1002,7 +1114,7 @@ document.getElementById('vfOpenRulebookBtn')!.addEventListener('click', () => {
 
 window.addEventListener('keydown', (ev) => {
   if (!violationFreezeActive) return;
-  if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Escape') {
+  if ((ev.key === 'Enter' || ev.key === ' ') && freezeQuizPassed && freezeRuleConfirmed) {
     ev.preventDefault();
     dismissViolationFreezeOverlay();
   }

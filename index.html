@@ -580,14 +580,45 @@
           <p id="vfHowToFixJa" class="vf-ja-text"></p>
           <p id="vfHowToFixEn" class="vf-en-text"></p>
         </div>
+
+        <!-- Step 1: Bundled Textbook / PDF Study Excerpt Card -->
+        <div class="vf-box vf-study-excerpt">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+            <strong id="vfChapterHeading" style="margin:0;color:#93c5fd;">📖 Study Guide Textbook Excerpt (教本・道路交通法の重要ポイント):</strong>
+            <a href="./docs/Gaimen_Kirikae_Study_Guide.pdf" target="_blank" rel="noopener" class="vf-pdf-link">
+              📕 Open 42-Page Study Guide PDF (教本PDFを開く) ↗
+            </a>
+          </div>
+          <div id="vfChapterRefText" class="vf-chapter-ref"></div>
+          <ul id="vfStudyPointsList" class="vf-study-points"></ul>
+        </div>
+
+        <!-- Step 2: Mandatory Rule Comprehension Quiz + Confirmation Gate -->
+        <div class="vf-box vf-quiz-gate">
+          <strong id="vfQuizHeading">🧠 Step 1: Rule Comprehension Check — Select the Correct Rule to Unlock (ルール理解確認クイズ):</strong>
+          <p id="vfQuizQuestionJa" class="vf-ja-text" style="margin-top:4px;"></p>
+          <p id="vfQuizQuestionEn" class="vf-en-text" style="margin-bottom:8px;"></p>
+          <div class="vf-quiz-options">
+            <button id="vfQuizOpt0" type="button" class="vf-quiz-opt-btn"></button>
+            <button id="vfQuizOpt1" type="button" class="vf-quiz-opt-btn"></button>
+          </div>
+          <div id="vfQuizFeedback" class="vf-quiz-feedback" hidden></div>
+
+          <label class="vf-confirm-row" id="vfConfirmRow">
+            <input id="vfUnderstoodChk" type="checkbox" />
+            <span id="vfUnderstoodLbl">
+              <strong>Step 2:</strong> I have studied this Japanese traffic rule and confirm I understand how to perform it properly (上記のルール・法令を学習し、正しい運転操作を理解しました)
+            </span>
+          </label>
+        </div>
       </div>
 
       <div class="vf-footer">
         <span id="vfScoreRemainText" class="vf-score-remain">Current Score: 75 / 100</span>
         <div class="vf-actions">
-          <button id="vfOpenRulebookBtn" type="button" class="action-btn">📖 Open Rulebook &amp; PDF (教本を見る)</button>
-          <button id="vfRetryStationBtn" type="button" class="action-btn">🔄 Retry Station (この課題をやり直す)</button>
-          <button id="vfResumeBtn" type="button" class="vf-resume-btn">▶ Acknowledge &amp; Resume [Space / Enter] (確認して再開)</button>
+          <button id="vfOpenRulebookBtn" type="button" class="action-btn">📖 Full Rulebook (教本一覧)</button>
+          <button id="vfRetryStationBtn" type="button" class="action-btn" disabled>🔒 Study &amp; Confirm Above to Retry (学習確認後にやり直し可)</button>
+          <button id="vfResumeBtn" type="button" class="vf-resume-btn" disabled>🔒 Study &amp; Confirm Rule Above to Unfreeze (学習・理解確認でロック解除)</button>
         </div>
       </div>
     </div>
