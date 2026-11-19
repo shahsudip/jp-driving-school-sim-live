@@ -35,6 +35,7 @@ import {
   syncVehicleVisual,
   type VehicleVisualHandle,
 } from './scene/VehicleBuilder';
+import { PublicRoadBuilder } from './scene/PublicRoadBuilder';
 import { TrafficAndPedestrians, type TrafficSafetyReport } from './scene/TrafficAndPedestrians';
 import { WorldBuilder } from './scene/WorldBuilder';
 import { renderRulebookContent, type RulebookTabId } from './ui/RulebookModal';
@@ -69,6 +70,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
 const world = new WorldBuilder(scene);
 const trafficAndPeds = new TrafficAndPedestrians(world.kyoshujoGroup);
+const publicRoad = new PublicRoadBuilder(scene);
 const customMapLayer = new CustomMapLayer(scene);
 const routeTrainer = new CustomRouteTrainer(scene);
 const signals = new TrafficSignalController();
@@ -316,10 +318,23 @@ function warpToStation(id: SpawnStationId, mode: SimMode = 'practice') {
   mapPresetEl.value = 'kyoshujo-3d';
   courseMode = 'kyoshujo';
   world.setKyoshujoVisible(true);
+  publicRoad.setVisible(false);
   customMapLayer.setVisible(false);
   syncMapWidthControls(COMPOUND_HALF_W * 2);
   const st = SPAWN_STATIONS[id];
   spawnAtPose(st.x, st.z, st.heading, mode);
+}
+
+function warpToPublicRoadCourse() {
+  selectedPresetId = 'public-road-3d';
+  mapPresetEl.value = 'public-road-3d';
+  courseMode = 'publicRoad';
+  world.setKyoshujoVisible(false);
+  publicRoad.setVisible(true);
+  customMapLayer.setVisible(false);
+  syncMapWidthControls(240);
+  const pose = publicRoad.getStartPose();
+  spawnAtPose(pose.x, pose.z, pose.heading, 'practice');
 }
 
 function selectCoursePreset(presetId: string) {
@@ -327,10 +342,15 @@ function selectCoursePreset(presetId: string) {
     warpToStation(currentStation, 'practice');
     return;
   }
+  if (presetId === 'public-road-3d') {
+    warpToPublicRoadCourse();
+    return;
+  }
   if (presetId === 'custom' && customMapConfig) {
     selectedPresetId = 'custom';
     courseMode = 'custom';
     world.setKyoshujoVisible(false);
+    publicRoad.setVisible(false);
     customMapLayer.setVisible(true);
     syncMapWidthControls(customMapConfig.mapWidth);
     spawnAtPose(customMapConfig.startX, customMapConfig.startZ, customMapConfig.startHeading, 'practice');
@@ -343,6 +363,7 @@ function selectCoursePreset(presetId: string) {
   courseMode = 'custom';
   customMapLayer.loadProceduralTestCenter(preset);
   world.setKyoshujoVisible(false);
+  publicRoad.setVisible(false);
   customMapLayer.setVisible(true);
   syncMapWidthControls(preset.mapWidth);
   spawnAtPose(preset.startX, preset.startZ, preset.startHeading, 'practice');
@@ -354,6 +375,8 @@ function resetVehicle() {
   const routeStart = routeTrainer.getStartPose();
   if (routeTrainer.hasRoute() && routeStart) {
     spawnAtPose(routeStart.x, routeStart.z, routeStart.heading, 'practice');
+  } else if (courseMode === 'publicRoad') {
+    warpToPublicRoadCourse();
   } else if (selectedPresetId === 'kyoshujo-3d') {
     warpToStation(currentStation, examiner.getMode());
   } else {
@@ -377,6 +400,12 @@ function renderStationAndCourseLists() {
     opt.textContent = isJa ? `${p.nameJa} (${p.nameEn})` : `${p.nameEn} (${p.nameJa})`;
     mapPresetEl.append(opt);
   }
+  const pubOpt = document.createElement('option');
+  pubOpt.value = 'public-road-3d';
+  pubOpt.textContent = isJa
+    ? '🛣️ 3D 路上教習・本免コース（自転車・駐車トラック・駐停車禁止テスト）'
+    : '🛣️ Stage 2: 3D Public Road (Cyclists, Parked Trucks & No-Parking Zones)';
+  mapPresetEl.append(pubOpt);
   if (customMapConfig) {
     const opt = document.createElement('option');
     opt.value = 'custom';
@@ -1371,6 +1400,36 @@ function syncBilingualText() {
   document.getElementById('lblMobileBrake')!.textContent = isJa ? 'ブレーキ' : 'Brake';
   document.getElementById('lblMobileThrottle')!.textContent = isJa ? 'アクセル' : 'Throttle';
 
+  // Top Site Nav & Home Landing Hub Bilingual Text
+  document.getElementById('navLangEnBtn')?.classList.toggle('active', !isJa);
+  document.getElementById('navLangJaBtn')?.classList.toggle('active', isJa);
+  document.getElementById('navBtnHome')!.textContent = isJa ? '🏠 ホーム (Home)' : '🏠 Home (ホーム)';
+  document.getElementById('navBtnPractice')!.textContent = isJa
+    ? '🚗 場内練習 (Practice)'
+    : '🚗 Practice (場内練習)';
+  document.getElementById('navBtnExam')!.textContent = isJa
+    ? '🎓 技能検定 (Practical Test)'
+    : '🎓 Practical Test (技能検定)';
+  document.getElementById('navBtnPublicRoad')!.textContent = isJa
+    ? '🛣️ 路上コース (Stage 2 Road)'
+    : '🛣️ Stage 2 Road (路上コース)';
+  document.getElementById('navBtnWritten')!.textContent = isJa
+    ? '📝 学科試験50問 (Written Test)'
+    : '📝 Written Test 50-Q (学科試験)';
+  document.getElementById('navBtnRules')!.textContent = isJa
+    ? '📖 教本・標識・PDF (Rules)'
+    : '📖 Rules & PDF (教本・標識)';
+  document.getElementById('navBtnRoute')!.textContent = isJa
+    ? '📍 ルート作成 (Route Builder)'
+    : '📍 Route Builder (ルート作成)';
+
+  document.getElementById('hhHeroTitle')!.textContent = isJa
+    ? '日本の自動車教習所・外免切替 3D総合シミュレーター'
+    : 'Japan Driving School 3D Simulator & Exam Portal';
+  document.getElementById('hhHeroLead')!.textContent = isJa
+    ? '場内技能試験（S字・クランク・坂道・踏切）、第2段階「路上コース（自転車保護・駐車トラック回避・駐停車禁止区域テスト）」、および2025年10月新制度の学科試験（50問・90%合格基準）をすべて1つの3Dサイトで練習できます。'
+    : 'Practice Stage 1 Driving Center courses, Stage 2 Public Road (3D cyclists, parked delivery trucks & no-parking zones), the 100-pt Practical Exam with Instructor View, and the Oct 2025 50-Question Written Test.';
+
   renderStationAndCourseLists();
   setCameraView(cameraSys.getMode());
 }
@@ -1386,6 +1445,91 @@ document.getElementById('quickLangEnBtn')!.addEventListener('click', () => setLo
 document.getElementById('quickLangJaBtn')!.addEventListener('click', () => setLocale('ja'));
 document.getElementById('panelLangEnBtn')!.addEventListener('click', () => setLocale('en'));
 document.getElementById('panelLangJaBtn')!.addEventListener('click', () => setLocale('ja'));
+document.getElementById('navLangEnBtn')?.addEventListener('click', () => setLocale('en'));
+document.getElementById('navLangJaBtn')?.addEventListener('click', () => setLocale('ja'));
+
+// ==========================================================
+// Top Website Navigation Bar & Home Landing Hub Controller
+// ==========================================================
+const homeHubOverlayEl = document.getElementById('homeHubOverlay')!;
+const siteNavBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-site-nav]'));
+let homeHubActive = true;
+document.body.classList.add('home-hub-active');
+
+type SiteNavSection = 'home' | 'practice' | 'exam' | 'publicRoad' | 'written' | 'rules' | 'route' | 'pdf';
+
+function navigateToSection(section: SiteNavSection) {
+  audio.unlock();
+
+  if (section === 'pdf') {
+    window.open('./docs/Gaimen_Kirikae_Study_Guide.pdf', '_blank', 'noopener');
+    return;
+  }
+
+  // Highlight active top nav link
+  siteNavBtns.forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.siteNav === section);
+  });
+
+  if (section === 'home') {
+    homeHubActive = true;
+    homeHubOverlayEl.hidden = false;
+    document.body.classList.add('home-hub-active');
+    rulebookModalEl.hidden = true;
+    rbModalEl.hidden = true;
+    return;
+  }
+
+  // Leaving Home Hub -> enter active section
+  homeHubActive = false;
+  homeHubOverlayEl.hidden = true;
+  document.body.classList.remove('home-hub-active');
+
+  if (section === 'practice') {
+    rulebookModalEl.hidden = true;
+    rbModalEl.hidden = true;
+    warpToStation(currentStation, 'practice');
+    setUiCollapsed(true);
+    canvas.focus({ preventScroll: true });
+  } else if (section === 'exam') {
+    rulebookModalEl.hidden = true;
+    rbModalEl.hidden = true;
+    warpToStation('startBay', 'exam');
+    setUiCollapsed(true);
+    canvas.focus({ preventScroll: true });
+  } else if (section === 'publicRoad') {
+    rulebookModalEl.hidden = true;
+    rbModalEl.hidden = true;
+    warpToPublicRoadCourse();
+    setUiCollapsed(true);
+    canvas.focus({ preventScroll: true });
+  } else if (section === 'written') {
+    rbModalEl.hidden = true;
+    openRulebookModal('mock50');
+  } else if (section === 'rules') {
+    rbModalEl.hidden = true;
+    openRulebookModal('predrive');
+  } else if (section === 'route') {
+    rulebookModalEl.hidden = true;
+    openRouteBuilder();
+  }
+}
+
+siteNavBtns.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const target = (btn.dataset.siteNav as SiteNavSection) || 'home';
+    navigateToSection(target);
+  });
+});
+
+document.getElementById('navLogoHomeBtn')?.addEventListener('click', () => navigateToSection('home'));
+
+document.querySelectorAll<HTMLElement>('[data-home-action]').forEach((el) => {
+  el.addEventListener('click', () => {
+    const act = (el.dataset.homeAction as SiteNavSection) || 'practice';
+    navigateToSection(act);
+  });
+});
 
 // ==========================================================
 // Interactive Route Builder & Memorization Trainer Controller
@@ -1763,7 +1907,18 @@ function animate(nowMs: number) {
 
     stepVehiclePhysics(
       vehicleState,
-      shapedInput,
+      homeHubActive
+        ? {
+            throttle: 0,
+            brake: 1,
+            steerLeft: 0,
+            steerRight: 0,
+            analogSteerTarget: null,
+            clutch: 0,
+            lookLeft: false,
+            lookRight: false,
+          }
+        : shapedInput,
       spec,
       FIXED_DT,
       {
@@ -1771,7 +1926,7 @@ function animate(nowMs: number) {
         autoCenterSteering: settings.autoCenterSteering,
         simTimeSec,
       },
-      courseMode === 'custom' ? flatTerrain : undefined
+      courseMode === 'custom' || courseMode === 'publicRoad' ? flatTerrain : undefined
     );
 
     if (
@@ -1786,7 +1941,7 @@ function animate(nowMs: number) {
       syncPreDriveChecklistUI();
     }
 
-    if (courseMode === 'kyoshujo') {
+    if (courseMode === 'kyoshujo' && !homeHubActive) {
       const trafficSafety: TrafficSafetyReport = trafficAndPeds.update(FIXED_DT, vehicleState, signals);
       latestCollision = checkCourseCollisions(vehicleState, spec);
       recordSafePoseIfClean(latestCollision, trafficSafety);
@@ -1803,6 +1958,26 @@ function animate(nowMs: number) {
         }
       }
       examiner.update(FIXED_DT, vehicleState, latestCollision, signals, trafficSafety);
+    } else if (courseMode === 'publicRoad' && !homeHubActive) {
+      const roadSafety: TrafficSafetyReport = publicRoad.update(FIXED_DT, vehicleState, signals);
+      const emptyCol: CollisionReport = {
+        wheels: {
+          FL: { corner: 'FL', x: 0, z: 0, minCurbDist: 99, curbTouch: false, curbMount: false, proximity: 0, pushX: 0, pushZ: 0 },
+          FR: { corner: 'FR', x: 0, z: 0, minCurbDist: 99, curbTouch: false, curbMount: false, proximity: 0, pushX: 0, pushZ: 0 },
+          RL: { corner: 'RL', x: 0, z: 0, minCurbDist: 99, curbTouch: false, curbMount: false, proximity: 0, pushX: 0, pushZ: 0 },
+          RR: { corner: 'RR', x: 0, z: 0, minCurbDist: 99, curbTouch: false, curbMount: false, proximity: 0, pushX: 0, pushZ: 0 },
+        },
+        anyCurbTouch: false,
+        anyCurbMount: false,
+        poleHit: null,
+        obstacleHit: null,
+        pushX: 0,
+        pushZ: 0,
+      };
+      recordSafePoseIfClean(emptyCol, roadSafety);
+      examiner.update(FIXED_DT, vehicleState, emptyCol, signals, roadSafety);
+    } else if (courseMode === 'kyoshujo' && homeHubActive) {
+      trafficAndPeds.update(FIXED_DT, vehicleState, signals);
     }
 
     accumulator -= FIXED_DT;
@@ -1848,7 +2023,9 @@ function animate(nowMs: number) {
   const worldBounds =
     courseMode === 'kyoshujo'
       ? { width: COMPOUND_HALF_W * 2, height: COMPOUND_HALF_D * 2 }
-      : customMapLayer.currentSize;
+      : courseMode === 'publicRoad'
+        ? { width: 230, height: 160 }
+        : customMapLayer.currentSize;
   cameraSys.renderPiPMiniMap(
     renderer,
     scene,
@@ -1909,6 +2086,14 @@ function animate(nowMs: number) {
   const prog = examiner.getWaypointProgress();
   if (routeStatus.bannerText) {
     hudDirectiveEl.textContent = routeStatus.bannerText;
+  } else if (courseMode === 'publicRoad') {
+    hudDirectiveEl.textContent = publicRoad.legalPullOverCompleted
+      ? isJa
+        ? '🎉 路上駐停車課題クリア！引き続き自転車との側方間隔（1.2m）と駐車トラック回避を練習できます'
+        : '🎉 Public Road Pull-Over Passed! Continue practicing cyclist clearance (1.2m) & truck passing'
+      : isJa
+        ? '🛣️ 路上コース：青レーンの自転車から1.2m空け、駐車トラックを右合図で回避し、赤枠（消火栓5m・バス停10m）を避けて緑枠の停車目標へ停車しましょう'
+        : '🛣️ Public Road: Keep >=1.2m from cyclists, signal right past parked trucks, avoid red No-Parking zones (5m Hydrant / 10m Bus Stop) & stop in the green Legal Pull-Over Bay';
   } else if (courseMode === 'custom') {
     const preset = BUILTIN_COURSE_PRESETS.find((p) => p.id === selectedPresetId);
     hudDirectiveEl.textContent = preset

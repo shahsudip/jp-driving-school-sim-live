@@ -54,6 +54,12 @@ export interface TrafficSafetyReport {
   pedestrianLabelJa?: string;
   pedestrianLabelEn?: string;
   trafficCollision: boolean;
+  cyclistDanger?: boolean;
+  cyclistLabelJa?: string;
+  cyclistLabelEn?: string;
+  noParkingViolation?: boolean;
+  noParkingLabelJa?: string;
+  noParkingLabelEn?: string;
 }
 
 function sampleCornerArc(

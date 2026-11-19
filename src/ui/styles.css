@@ -154,7 +154,7 @@ a:focus-visible,
 /* ===== Top-Left UI Panel & Quick Actions ===== */
 #ui {
   position: fixed;
-  top: var(--gap-lg);
+  top: 62px;
   left: var(--gap-lg);
   z-index: var(--z-ui);
   pointer-events: none;
@@ -686,7 +686,7 @@ a:focus-visible,
 
 #mirrorHud {
   position: fixed;
-  top: var(--gap-lg);
+  top: 64px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -711,18 +711,18 @@ a:focus-visible,
 }
 
 #mirrorHud.cockpit-layout #mirrorCenter {
-  top: 18px;
+  top: 62px;
   left: 50%;
   transform: translateX(-50%);
 }
 
 #mirrorHud.cockpit-layout #mirrorLeft {
-  top: 116px;
+  top: 156px;
   left: 14px;
 }
 
 #mirrorHud.cockpit-layout #mirrorRight {
-  top: 116px;
+  top: 156px;
   right: 14px;
 }
 
@@ -1552,7 +1552,7 @@ body.minimap-expanded #firstRunHint {
 /* ===== Interactive 8-Step Pre-Drive Cockpit Checklist Bar (#preDriveBar) ===== */
 .pre-drive-bar {
   position: fixed;
-  top: 52px;
+  top: 104px;
   right: 16px;
   width: min(650px, calc(100vw - 32px));
   z-index: 25;
@@ -2333,4 +2333,270 @@ body.minimap-expanded #preDriveBar {
   font-size: 12px;
   line-height: 1.45;
   color: #e2e8f0;
+}
+
+/* ===== Persistent Top Site Navigation Bar (#topSiteNav) & Home Landing Hub (#homeHubOverlay) ===== */
+.top-site-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  z-index: 180;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  background: rgba(8, 17, 25, 0.92);
+  border-bottom: 1px solid rgba(52, 211, 153, 0.32);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.tsn-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tsn-badge {
+  font-size: 21px;
+  line-height: 1;
+}
+
+.tsn-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.tsn-brand-text strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: #ecfdf5;
+}
+
+.tsn-brand-text small {
+  font-size: 10.5px;
+  color: #93c5fd;
+}
+
+.tsn-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tsn-link {
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #dbeafe;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.tsn-link:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(52, 211, 153, 0.55);
+}
+
+.tsn-link.active {
+  background: linear-gradient(180deg, rgba(5, 150, 105, 0.48), rgba(4, 120, 87, 0.65));
+  border-color: #34d399;
+  color: #ecfdf5;
+  box-shadow: 0 0 14px rgba(52, 211, 153, 0.25);
+}
+
+.tsn-right {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tsn-lang-btn {
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 750;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.tsn-lang-btn.active {
+  border-color: #34d399;
+  background: rgba(5, 150, 105, 0.35);
+  color: #ecfdf5;
+}
+
+/* Home Landing Hub Overlay */
+.home-hub-overlay {
+  position: fixed;
+  inset: 52px 0 0 0;
+  z-index: 150;
+  overflow-y: auto;
+  padding: 28px 20px 44px;
+  background: radial-gradient(circle at 50% 18%, rgba(12, 32, 46, 0.72) 0%, rgba(7, 15, 23, 0.9) 100%);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.home-hub-overlay[hidden] {
+  display: none;
+}
+
+/* Hide driving HUDs while on the Home Landing Screen */
+body.home-hub-active #ui,
+body.home-hub-active #mirrorHud,
+body.home-hub-active #cockpitSignalHud,
+body.home-hub-active #preDriveBar,
+body.home-hub-active #hud,
+body.home-hub-active #wheelHud,
+body.home-hub-active #miniMap,
+body.home-hub-active #firstRunHint,
+body.home-hub-active #mobileControls {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.hh-container {
+  width: min(1080px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.hh-hero {
+  padding: 28px 30px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(16, 35, 50, 0.92), rgba(10, 22, 33, 0.95));
+  border: 1px solid rgba(52, 211, 153, 0.42);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.48);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.hh-pill {
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(5, 150, 105, 0.25);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  color: #a7f3d0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hh-hero h1 {
+  margin: 0;
+  font-size: clamp(23px, 3.2vw, 34px);
+  font-weight: 850;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.hh-hero p {
+  margin: 0;
+  max-width: 780px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #cbd5e1;
+}
+
+.hh-hero-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.hh-btn-primary {
+  padding: 12px 22px;
+  border-radius: 12px;
+  border: 1px solid #34d399;
+  background: linear-gradient(180deg, #059669, #047857);
+  color: #ecfdf5;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(5, 150, 105, 0.35);
+}
+
+.hh-btn-secondary {
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(147, 197, 253, 0.45);
+  background: rgba(30, 58, 138, 0.32);
+  color: #eff6ff;
+  font-size: 13.5px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.hh-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.hh-card {
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: rgba(15, 27, 39, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.hh-card:hover {
+  transform: translateY(-3px);
+  border-color: #34d399;
+  background: rgba(19, 36, 52, 0.95);
+}
+
+.hh-card-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.hh-card h3 {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.hh-card p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #cbd5e1;
+  flex: 1;
+}
+
+.hh-card-link {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: #34d399;
+  margin-top: 4px;
 }

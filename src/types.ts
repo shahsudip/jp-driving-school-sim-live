@@ -10,7 +10,7 @@ export type CameraMode = 'chase' | 'cockpit' | 'instructor' | 'hood' | 'orbit';
 
 export type SimMode = 'practice' | 'exam';
 
-export type CourseMode = 'kyoshujo' | 'custom';
+export type CourseMode = 'kyoshujo' | 'publicRoad' | 'custom';
 
 export type BlinkerState = 'off' | 'left' | 'right' | 'hazard';
 
@@ -160,7 +160,9 @@ export type ViolationCode =
   | 'PRE_DRIVE_ORDER'
   | 'NO_SEATBELT'
   | 'PEDESTRIAN_PRIORITY'
-  | 'TRAFFIC_COLLISION';
+  | 'TRAFFIC_COLLISION'
+  | 'CYCLIST_CLEARANCE'
+  | 'NO_PARKING_ZONE';
 
 export interface RuleStudyQuiz {
   questionJa: string;

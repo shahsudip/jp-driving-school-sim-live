@@ -5,10 +5,142 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#059669" />
   <title>Japan Driving Test Course Simulator 3D | 日本の自動車教習所シミュレーター</title>
-  <script type="module" crossorigin src="./assets/index-BGsBMXpB.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-CmGL8P4_.css">
+  <script type="module" crossorigin src="./assets/index-Cx1FgL_e.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-D3vgRo3r.css">
 </head>
 <body>
+  <!-- Persistent Top Website Navigation Bar -->
+  <header id="topSiteNav" class="top-site-nav" aria-label="Primary website navigation">
+    <div class="tsn-brand" id="navLogoHomeBtn" role="button" tabindex="0">
+      <span class="tsn-badge">🔰</span>
+      <div class="tsn-brand-text">
+        <strong>GaimenGo Japan</strong>
+        <small id="navBrandSub">日本の自動車教習所・外免切替ポータル</small>
+      </div>
+    </div>
+
+    <nav class="tsn-links">
+      <button type="button" class="tsn-link active" data-site-nav="home" id="navBtnHome">
+        🏠 Home / ホーム
+      </button>
+      <button type="button" class="tsn-link" data-site-nav="practice" id="navBtnPractice">
+        🚗 Driving Practice / 自由練習
+      </button>
+      <button type="button" class="tsn-link" data-site-nav="exam" id="navBtnExam">
+        🎓 Practical Test (100pt) / 技能検定
+      </button>
+      <button type="button" class="tsn-link" data-site-nav="publicRoad" id="navBtnPublicRoad" style="border-color:rgba(251,191,36,0.5);color:#fde68a;">
+        🛣️ Stage 2 Public Road / 路上コース
+      </button>
+      <button type="button" class="tsn-link" data-site-nav="written" id="navBtnWritten">
+        📝 Written Test (50-Q) / 学科試験
+      </button>
+      <button type="button" class="tsn-link" data-site-nav="rules" id="navBtnRules">
+        📖 Rules, Signs &amp; PDF / 教本・標識
+      </button>
+      <button type="button" class="tsn-link" data-site-nav="route" id="navBtnRoute">
+        📍 Route Builder / ルート作成
+      </button>
+    </nav>
+
+    <div class="tsn-right">
+      <button id="navLangEnBtn" class="tsn-lang-btn" type="button">EN</button>
+      <button id="navLangJaBtn" class="tsn-lang-btn" type="button">日本語</button>
+    </div>
+  </header>
+
+  <!-- Home Landing Hub View (Default Landing Screen When Opening Website) -->
+  <main id="homeHubOverlay" class="home-hub-overlay">
+    <div class="hh-container">
+      <section class="hh-hero">
+        <div class="hh-pill" id="hhHeroPill">🇯🇵 Official Oct 2025 Format · 外免切替・仮免・本免 総合学習ポータル</div>
+        <h1 id="hhHeroTitle">Japan Driving School 3D Simulator &amp; Exam Portal</h1>
+        <p id="hhHeroLead">
+          Master the Japanese practical driving test (技能試験) and the 50-question written test (学科試験 90%合格基準) in one realistic 3D platform — complete with an Instructor Passenger-Seat camera, AI traffic &amp; pedestrians, custom route builder, and the 42-page study guide PDF.
+        </p>
+        <div class="hh-hero-ctas">
+          <button type="button" class="hh-btn-primary" data-home-action="practice" id="hhStartPracticeBtn">
+            🚗 Start 3D Driving Practice (3D自由練習を始める)
+          </button>
+          <button type="button" class="hh-btn-secondary" data-home-action="exam" id="hhStartExamBtn">
+            🎓 Start 100-Pt Practical Exam (技能検定試験を開始)
+          </button>
+          <button type="button" class="hh-btn-secondary" data-home-action="publicRoad" id="hhStartPublicRoadBtn" style="border-color:rgba(251,191,36,0.55);color:#fde68a;">
+            🛣️ Stage 2 Public Road Course (路上教習・自転車・駐停車テスト)
+          </button>
+          <button type="button" class="hh-btn-secondary" data-home-action="written" id="hhStartWrittenBtn">
+            📝 Take 50-Question Written Test (学科模擬試験50問)
+          </button>
+        </div>
+      </section>
+
+      <section class="hh-cards-grid">
+        <article class="hh-card" data-home-action="practice">
+          <div class="hh-card-icon">🚗</div>
+          <h3 id="hhCard1Title">3D Driving Practice (場内コース自由練習)</h3>
+          <p id="hhCard1Desc">
+            Practice S-Curve (S字), 90° Crank (クランク), Hill Start (坂道発進), Railroad Crossing (踏切), and Bay/Parallel Parking with RHD Sedan or 400cc Motorcycle.
+          </p>
+          <span class="hh-card-link" id="hhCard1Link">Open 3D Practice →</span>
+        </article>
+
+        <article class="hh-card" data-home-action="exam">
+          <div class="hh-card-icon">👨‍✈️</div>
+          <h3 id="hhCard2Title">100-Pt Practical Driving Test (技能検定・検定員視点)</h3>
+          <p id="hhCard2Desc">
+            Sit with the virtual examiner in Instructor View. Enforces the 8-step Pre-Drive Cockpit Sequence (Seat → Mirrors → Seatbelt), 2-second 止まれ stops, and instant red-freeze rule explanations.
+          </p>
+          <span class="hh-card-link" id="hhCard2Link">Start Practical Exam →</span>
+        </article>
+
+        <article class="hh-card" data-home-action="publicRoad" style="border-color:rgba(251,191,36,0.45);">
+          <div class="hh-card-icon">🛣️</div>
+          <h3 id="hhCardRoadTitle">Stage 2 Public Road Map (路上教習・本免卒業検定)</h3>
+          <p id="hhCardRoadDesc">
+            4-lane city boulevard with animated 3D cyclists in the left bike lane (1.2m clearance &amp; left-turn Makikomi check), parked delivery trucks with hazards, and red No-Parking / No-Stopping zones (5m Fire Hydrant, 10m Bus Stop) vs green Legal Pull-Over Bay.
+          </p>
+          <span class="hh-card-link" id="hhCardRoadLink" style="color:#fde68a;">Drive Stage 2 Public Road →</span>
+        </article>
+
+        <article class="hh-card" data-home-action="written">
+          <div class="hh-card-icon">📝</div>
+          <h3 id="hhCard3Title">50-Question Written Test (2025年新制度 学科試験)</h3>
+          <p id="hhCard3Desc">
+            Interactive True/False (○ / ×) mock exam matching the October 2025 Gaimen Kirikae standard (45/50 = 90% to pass) with instant trap explanations.
+          </p>
+          <span class="hh-card-link" id="hhCard3Link">Start Written Test →</span>
+        </article>
+
+        <article class="hh-card" data-home-action="rules">
+          <div class="hh-card-icon">📖</div>
+          <h3 id="hhCard4Title">Rules, Road Signs &amp; 42-Page PDF (教本・標識・PDF)</h3>
+          <p id="hhCard4Desc">
+            Study Driving Center Compound Rules (場内) vs Public Road Rules (路上), visual Japanese traffic signs encyclopedia, NPA deduction table, and download the 42-page Study Guide PDF.
+          </p>
+          <span class="hh-card-link" id="hhCard4Link">Open Rulebook &amp; PDF →</span>
+        </article>
+
+        <article class="hh-card" data-home-action="route">
+          <div class="hh-card-icon">📍</div>
+          <h3 id="hhCard5Title">Custom Route Builder &amp; Memory Trainer (コース図暗記)</h3>
+          <p id="hhCard5Desc">
+            Upload your local driving center’s route map image, auto-trace colored route lines, stamp 3D 止まれ signs, and practice in Guided, Blind Memory, or Auto-Drive modes.
+          </p>
+          <span class="hh-card-link" id="hhCard5Link">Build Custom Route →</span>
+        </article>
+
+        <article class="hh-card" data-home-action="pdf">
+          <div class="hh-card-icon">📕</div>
+          <h3 id="hhCard6Title">Bundled Study Guide PDF (外免切替 完全教本PDF)</h3>
+          <p id="hhCard6Desc">
+            Open or download the complete 42-page Gaimen Kirikae Written &amp; Practical Study Guide PDF directly in your browser.
+          </p>
+          <span class="hh-card-link" id="hhCard6Link">Open PDF Guide ↗</span>
+        </article>
+      </section>
+    </div>
+  </main>
+
   <!-- Top-Left Collapsible Setup Card & Persistent Quick View Pills (GaimenGo layout) -->
   <div id="ui" class="collapsed">
     <div class="topBarRow">

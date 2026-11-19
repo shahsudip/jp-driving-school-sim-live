@@ -120,6 +120,18 @@ export const VIOLATION_RULE_EXPLANATIONS: Record<ViolationCode, RuleExplanationM
     howToFixJa: '周囲の教習車との車間距離を保ち、交差点では優先車に道を譲ってください。',
     howToFixEn: 'Keep a safe following distance and yield to priority traffic at intersections.',
   },
+  CYCLIST_CLEARANCE: {
+    ruleRefJa: '歩行者・自転車側方間隔不保持／巻き込み（道路交通法第18条・第34条）：自転車への接近または左折巻き込み（検定中止）',
+    ruleRefEn: 'Cyclist Lateral Clearance / Left-Turn Squeeze (自転車巻き込み・側方間隔違反): Drove too close (<1.2m) to a cyclist without slowing down (Instant Fail).',
+    howToFixJa: '自転車を追い抜く時は1.0〜1.5m以上の安全な側方間隔を空け、左折時は左ミラーと左後方目視（Zキー）で自転車を先に通してください。',
+    howToFixEn: 'Keep >=1.2m lateral clearance when passing cyclists, and check left mirror + left blind spot (Z) to yield to cyclists before turning left.',
+  },
+  NO_PARKING_ZONE: {
+    ruleRefJa: '駐停車禁止・駐車禁止場所違反（道路交通法第44条・第45条）：消火栓5m・バス停10m・交差点5m・車庫出入口3m以内での駐停車（-10点）',
+    ruleRefEn: 'Illegal Stopping/Parking Zone (駐停車違反 -10 pts): Stopped or parked inside a prohibited zone (within 5m of Fire Hydrant/Crosswalk, 10m of Bus Stop, or 3m of Garage Exit).',
+    howToFixJa: '路端に停車する時は、赤枠の禁止エリア（消火栓5m・バス停10m・交差点5m）を避け、緑枠の「指定駐停車目標エリア」内に左端30cm以内で停車してください。',
+    howToFixEn: 'Avoid red-striped prohibited zones (5m Fire Hydrant, 10m Bus Stop) and pull over parallel within 30cm of the left curb inside the green Legal Pull-Over Bay.',
+  },
 };
 
 export interface ExamWaypoint {
@@ -413,9 +425,33 @@ export class ExaminerEngine {
         true,
         '他車接触事故',
         'Traffic Vehicle Collision',
-        'コース上の他車（教習車）と接触しました',
-        'Collided with another training vehicle on the course',
+        'コース上の他車（教習車・駐車トラック）と接触しました',
+        'Collided with another vehicle or parked delivery truck on the road',
         3.5
+      );
+    }
+    if (trafficSafety?.cyclistDanger) {
+      this.recordViolation(
+        'CYCLIST_CLEARANCE',
+        30,
+        true,
+        '自転車保護違反（側方間隔・巻き込み）',
+        'Cyclist Safety Violation',
+        trafficSafety.cyclistLabelJa ?? '自転車との安全な側方間隔（1.2m以上）を保たずに接近しました',
+        trafficSafety.cyclistLabelEn ?? 'Passed too close to a cyclist without safe lateral clearance or yielding',
+        4.0
+      );
+    }
+    if (trafficSafety?.noParkingViolation) {
+      this.recordViolation(
+        'NO_PARKING_ZONE',
+        10,
+        false,
+        '駐停車禁止・駐車禁止場所違反',
+        'Prohibited Parking/Stopping Zone',
+        trafficSafety.noParkingLabelJa ?? '駐停車禁止区域（消火栓5m・バス停10m・交差点5m以内）で停車しました',
+        trafficSafety.noParkingLabelEn ?? 'Stopped inside a prohibited zone (within 5m of Fire Hydrant or 10m of Bus Stop)',
+        6.0
       );
     }
 
